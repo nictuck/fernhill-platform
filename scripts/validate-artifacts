@@ -117,6 +117,30 @@ for (const f of list('releases', /^\d{4}-v\d+\.\d+\.\d+\.md$/)) {
   if (!seenIds.has(r.fm.intent)) bad(file, `unknown intent ${r.fm.intent}`);
 }
 
+// ---- exceptions ------------------------------------------------------------------
+const exceptionFiles = list('exceptions', /^EX-\d{3}-[a-z0-9-]+\.md$/);
+const seenEx = new Set();
+for (const f of exceptionFiles) {
+  const file = `exceptions/${f}`;
+  const r = frontmatter(file); if (!r) continue;
+  const id = f.slice(0, 6);
+  if (seenEx.has(id)) bad(file, `duplicate id ${id}`);
+  seenEx.add(id);
+  requireKeys(file, r.fm, ['id', 'title', 'status', 'grants', 'repos', 'authorized_by', 'role', 'granted', 'expires']);
+  if (r.fm.id !== id) bad(file, `id "${r.fm.id}" must equal file prefix "${id}"`);
+  requireEnum(file, r.fm, 'status', ['proposed', 'active', 'expired', 'revoked']);
+  requireDate(file, r.fm, 'granted'); requireDate(file, r.fm, 'expires');
+  if ('grants' in r.fm) {
+    const grants = r.fm.grants.replace(/^\[|\]$/g, '').split(',').map((s) => s.trim()).filter(Boolean);
+    for (const g of grants) if (!['merge'].includes(g)) bad(file, `unknown grant "${g}" (hooks honor: merge)`);
+    if (grants.length === 0) bad(file, 'grants is empty');
+  }
+  if (r.fm.granted && r.fm.expires && r.fm.expires <= r.fm.granted) bad(file, 'expires must be after granted');
+  requireSections(file, r.body, ['Why', 'Conditions', 'Evidence', 'Ends when']);
+  if (targetMain && r.fm.status === 'proposed') bad(file, 'status is "proposed" — the authorizing human must set active before this merges to main');
+  if (r.fm.status === 'active' && r.fm.expires && r.fm.expires < new Date().toISOString().slice(0, 10)) bad(file, `active but expired on ${r.fm.expires}; set status: expired`);
+}
+
 // ---- config ---------------------------------------------------------------------
 try { JSON.parse(fs.readFileSync(path.join(ROOT, 'flow.config.json'), 'utf8')); }
 catch (e) { bad('flow.config.json', e.message); }

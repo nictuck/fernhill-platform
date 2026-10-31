@@ -20,6 +20,8 @@ fi
 mkdir -p "$TEMPLATE/.claude/hooks" "$TEMPLATE/.github/workflows"
 cp "$ROOT"/.claude/hooks/*.sh "$TEMPLATE/.claude/hooks/"
 cp "$ROOT/REVIEW.md" "$TEMPLATE/REVIEW.md"
+mkdir -p "$TEMPLATE/.claude/skills/review"
+cp "$ROOT/.claude/skills/review/SKILL.md" "$TEMPLATE/.claude/skills/review/SKILL.md"
 cp "$ROOT/.github/workflows/release.yml" "$TEMPLATE/.github/workflows/release.yml"
 
 # Product repos get the same hooks; permissions add the product commands.

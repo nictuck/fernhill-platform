@@ -74,7 +74,7 @@ gh api -X PUT "repos/$repo/branches/main/protection" --silent \
 {
   "required_status_checks": { "strict": true, "contexts": ["check"] },
   "enforce_admins": true,
-  "required_pull_request_reviews": null,
+  "required_pull_request_reviews": { "required_approving_review_count": 0, "dismiss_stale_reviews": false, "require_code_owner_reviews": false },
   "restrictions": null,
   "allow_force_pushes": false,
   "allow_deletions": false,
@@ -82,7 +82,7 @@ gh api -X PUT "repos/$repo/branches/main/protection" --silent \
   "required_conversation_resolution": true
 }
 JSON
-echo "  protected main (PR + green 'check' required, no force push, admins included)"
+echo "  protected main (PR required, green 'check' required, no force push, admins included)"
 
 # production branch: starts at main; afterwards only the release workflow moves it
 if ! git -C "$dest" ls-remote --exit-code --heads origin production >/dev/null 2>&1; then
@@ -93,7 +93,7 @@ gh api -X PUT "repos/$repo/branches/production/protection" --silent --input - <<
 { "required_status_checks": null, "enforce_admins": true, "required_pull_request_reviews": null,
   "restrictions": null, "allow_force_pushes": false, "allow_deletions": false }
 JSON
-echo "  protected production (no force push, no deletion; moved only by the release workflow)"
+echo "  protected production (no force push, no deletion; on a personal account GitHub cannot restrict pushes to the workflow alone — the hook and the agent's identity do that)"
 
 user_id=$(gh api user --jq .id)
 gh api -X PUT "repos/$repo/environments/production" --silent \
@@ -124,8 +124,8 @@ Done. Only you can do the rest:
   1. Merge the two PRs (setup in $repo, link in $PLATFORM).
   2. Netlify (team $(cfg netlify_team)): Add new project → Import from GitHub → $repo, name it "$site",
      accept the build settings from netlify.toml. Then Site configuration → Build & deploy →
-     Branches and deploy contexts: Production branch = production, Branch deploys = main, Deploy previews = any PR.
-     No tokens needed anywhere.
+     Branches and deploy contexts: Production branch = production, Branch deploys = main, Deploy previews = any PR;
+     Deploy Previews from forks: Require approval. No tokens needed anywhere; keep the site's env vars free of secrets.
   3. Optional AI review: gh secret set ANTHROPIC_API_KEY -R $repo && gh variable set CLAUDE_REVIEW_ENABLED -b true -R $repo
   4. cd $dest && claude → /plan $intent
 EOF

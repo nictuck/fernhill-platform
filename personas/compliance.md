@@ -24,6 +24,10 @@ mechanism, not a promise:
 | Production release | Release manager | GitHub `production` environment reviewer; `production-gate` hook |
 | Agent permission change | Code owner | PR touching `.claude/settings.json` or hooks gets the Security pass |
 | Incident dismissed | On-call | reason recorded in the incident file |
+| Plan approved | Engineer | `plan/NNNN-*.md` with `status: approved` and `approved_by`, committed in the product repo |
+| Process exception granted or revoked | Product owner | `exceptions/EX-*.md` merged by the human; hooks read it from `main`; dashboard shows it |
+| Product repo provisioned | Code owner | `scripts/new-product` output: branch protection on `main` and `production`, environments, CODEOWNERS; Netlify settings recorded in `.sdlc.yaml` |
+| Deploy-time config change (tokens, env vars) | Release manager | recorded in `releases/` before the change: key name, contexts, permissions, expiry, who |
 
 ## At the design gate
 
