@@ -199,9 +199,22 @@ deploy tokens exist anywhere.
 
 A gate can be delegated to the agent for a bounded time by a file in
 [`exceptions/`](../exceptions/), merged by the human who owns the gate.
-Hooks read exceptions only from the platform's `origin/main`, so a
-delegation exists exactly when a human merged it and until it expires or
-is revoked. Each use leaves evidence: the `/review` comment on the PR and
+Hooks read exceptions through the GitHub API from the platform repo's
+`main` (repo name hardcoded in the hook), so a delegation exists exactly
+when a human merged it and until it expires or is revoked.
+
+Two layers, honestly described: **hooks** run on the agent's machine and
+stop an honest agent before it tries, with a reason; **GitHub** is the
+backstop that holds regardless — `main` requires a PR and a green check
+(admins included), `production` cannot be force-pushed or deleted, and the
+`production` environment requires a named reviewer; the release workflow
+refuses to run in a repo whose environment has no reviewer. One gap is
+real and recorded: on a personal GitHub account a ruleset cannot name the
+Actions app as its only bypass actor, so "only the release workflow moves
+`production`" is enforced by the hook and by the fact that the agent acts
+under the owner's credentials. The durable fix is a separate, low-privilege
+GitHub identity for the agent (or an organization account); until then
+this is a known, accepted limit. Each use leaves evidence: the `/review` comment on the PR and
 the merge commit body naming the exception id.
 
 What can be delegated: gate 4 (`grants: [merge]`), on the conditions in

@@ -12,9 +12,15 @@ on the dashboard. Nothing is delegated by conversation alone.
 - `grants` names what the agent may do. Hooks honor only what is listed:
   `merge` lets `gh pr merge` through when the merge body names the
   exception id, so every merge commit records which exception allowed it.
-- Hooks read the exception from the platform's `origin/main`, never from a
-  working tree or branch, so a fake exception on a branch grants nothing.
-  A revocation takes effect at the next fetch.
+- Hooks read the exception through the GitHub API from
+  `nictuck/fernhill-platform` at `main` — the repo name is hardcoded in the
+  hook, so nothing in a working tree, a local ref, a branch or the
+  environment can supply a fake one. A revocation takes effect immediately.
+- Hooks are an honest-agent control: they run on the agent's machine. The
+  backstop that holds regardless is GitHub — PR-required branch protection
+  on `main`, no force-push or deletion on `production`, and the
+  environment's required reviewer (see docs/flow.md → Exceptions for the
+  one known gap on personal accounts).
 - Exceptions never cover: status flips on `intent.md` / `spec.md` (gates 1
   and 2), production approval (gate 5), pushes to `main` or `production`,
   or PRs that change the guardrails themselves (`.claude/`, hooks,
