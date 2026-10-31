@@ -57,8 +57,10 @@ config.
 
 ## Open questions
 
-- Should the dashboard be a product repo (`fernhill-flow`) like everything
-  else, or live inside `fernhill-platform`?
+- ~~Should the dashboard be a product repo (`fernhill-flow`) like everything
+  else, or live inside `fernhill-platform`?~~ Answered 2026-10-31: its own
+  repo, `fernhill-flow`, with its own Netlify site. `fernhillplatform.netlify.app`
+  stays the company front door.
 - Read-only, or can gate actions (accept an intent, approve a release) be
   taken from the dashboard? Starting assumption: read-only, deep links to
   GitHub for actions.
