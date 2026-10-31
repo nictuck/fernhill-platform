@@ -1,7 +1,7 @@
 ---
 id: "0001"
 title: Flow dashboard
-status: proposed
+status: accepted
 author: Nicholas Tucker
 origin: idea
 product: ""
