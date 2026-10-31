@@ -26,7 +26,6 @@
       "Read(~/.ssh/**)",
       "Read(~/.aws/**)",
       "Read(~/.netlify/**)",
-      "Bash(gh pr merge*)",
       "Bash(gh pr review * --approve*)",
       "Bash(netlify deploy * --prod*)"
     ]
