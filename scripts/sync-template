@@ -7,6 +7,16 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE="${1:-$ROOT/../fernhill-product-template}"
 [ -d "$TEMPLATE" ] || { echo "template checkout not found: $TEMPLATE" >&2; exit 1; }
 
+# The template's main is protected; sync only onto a clean feature branch so
+# the result lands in a PR and never as stray changes on main.
+tb=$(git -C "$TEMPLATE" branch --show-current)
+if [ "$tb" = "main" ] || [ -z "$tb" ]; then
+  echo "template checkout is on '${tb:-detached}'; switch it to a feature branch first (git -C \"$TEMPLATE\" switch -c template/<change>)" >&2; exit 1
+fi
+if [ -n "$(git -C "$TEMPLATE" status --porcelain)" ]; then
+  echo "template checkout has uncommitted changes; commit or stash them first" >&2; exit 1
+fi
+
 mkdir -p "$TEMPLATE/.claude/hooks" "$TEMPLATE/.github/workflows"
 cp "$ROOT"/.claude/hooks/*.sh "$TEMPLATE/.claude/hooks/"
 cp "$ROOT/REVIEW.md" "$TEMPLATE/REVIEW.md"
