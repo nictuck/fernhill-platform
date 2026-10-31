@@ -46,6 +46,12 @@
         "hooks": [
           { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/protect-tests.sh" }
         ]
+      },
+      {
+        "matcher": "mcp__.*netlify-deploy-services-updater.*",
+        "hooks": [
+          { "type": "command", "command": "\"$CLAUDE_PROJECT_DIR\"/.claude/hooks/production-gate.sh" }
+        ]
       }
     ]
   }

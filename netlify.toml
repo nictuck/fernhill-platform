@@ -1,0 +1,7 @@
+# Netlify site: fernhillplatform (team nictuck), connected to this repo.
+# Production branch is `production` (moved by the release workflow after
+# approval); `main` is the staging branch deploy. The build writes
+# version.txt so the pipeline can tell when a commit is live.
+[build]
+  command = 'echo "$COMMIT_REF" > public/version.txt'
+  publish = "public"

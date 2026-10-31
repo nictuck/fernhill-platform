@@ -24,8 +24,10 @@ for incidents. `/new-product` links an accepted spec to a new repo.
   The dashboard reads frontmatter; keep keys lowercase and stable.
 - `status: proposed` is the author's claim. Only the product owner flips it
   to `accepted`, and only in the PR that merges it. Never flip it yourself.
-- All changes land through a PR. Never push to `main`, never merge, never
-  approve. Hooks block this; CLAUDE.md is the reason.
+- All changes land through a PR. Never push to `main` or `production`,
+  never merge, never approve, never start a `release` run. Hooks block
+  this; CLAUDE.md is the reason. `main` is staging; `production` moves
+  only when the release manager approves (docs/flow.md, Deploy model).
 - Personas are advisory. Quote their findings under "Flagged concerns"; do
   not resolve a concern on their behalf.
 - Commit messages: imperative, one line, then why. Artifact commits name

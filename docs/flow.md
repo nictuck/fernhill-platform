@@ -41,7 +41,7 @@ fernhill-platform/                 the company: process, policy, personas, dashb
   plan/NNNN-slug.md                Stage 3 artifact: approved plan for one change
   src/, tests/                     the diff and its tests
   .github/workflows/ci.yml         Stage 4: build / test / lint on every PR
-  .github/workflows/deploy.yml     Stage 5: staging on merge, production behind a gate
+  .github/workflows/release.yml    Stage 5: main = staging; production branch moves after approval
   evals/                           regression evals, one per incident
 ```
 
@@ -131,7 +131,7 @@ visible and the agent's exclusion deterministic.
 | 2 | Spec accepted | Product owner (tech lead consulted when `flagged > 0`) | Flip `status → accepted`, merge PR | Merge commit |
 | 3 | Plan approved | Engineer | Accept in plan mode; set `status: approved`, `approved_by` | plan.md commit |
 | 4 | Code owner approval | Code owner | Merge the PR (CI green, review findings addressed) | PR merge |
-| 5 | Release authorized | Release manager | Approve the `production` environment deployment in GitHub | Deployment approval record |
+| 5 | Release authorized | Release manager | Approve the `production` environment in the `release` workflow; it fast-forwards the `production` branch Netlify publishes | GitHub deployment record (approver, commit) |
 | 6 | Incident triage | On-call | Mark incident `fix-now`, `schedule` or `dismiss` (with reason) | incident file commit |
 
 Rules enforced by hooks and CI, not by goodwill:
@@ -139,9 +139,11 @@ Rules enforced by hooks and CI, not by goodwill:
 - CI fails if any `intent.md`/`spec.md` on `main` (or merging into it) has
   `status: proposed`. The product owner must flip the status; that edit is the
   acceptance signature.
-- The agent cannot merge, approve, or push to `main` (`no-merge` hook).
+- The agent cannot merge, approve, or push to `main` or `production`
+  (`no-merge` hook).
 - The agent cannot deploy to production (`production-gate` hook locally;
-  `production` environment required reviewer in GitHub).
+  only the `release` workflow moves `production`, behind the environment's
+  required reviewer in GitHub).
 - During a `/fix` task the agent cannot edit test files (`protect-tests` hook).
 - Code changes without a matching `plan/` update get a warning at commit
   time (`plan-sync` hook).
@@ -157,7 +159,7 @@ waiting on** from the artifacts. Nobody maintains a board by hand.
 | 2 Design | `intent.md` on `main`, `status: accepted`, no `spec.md` on `main` | Product owner to run `/design`; then gate 2 | no spec PR within 5 days, or spec PR open > 3 days, or `flagged > 0` on an open spec PR |
 | 3 Build | `spec.md` accepted; product repo linked | Engineer to run `/plan`; then build | no `plan/` file within 5 days; branch with no commits for 3 days |
 | 4 Test | PR open in product repo | CI | CI red on latest push > 1 day |
-| 5 Deploy | PR merged | Staging deploy → release manager (gate 5) | `production` deployment pending approval > 2 days; deploy failed |
+| 5 Deploy | PR merged | Staging live → release manager (gate 5) | `production` deployment pending approval > 2 days; `release` run failed |
 | 6 Maintain | Production deployment succeeded | On-call, when an incident file is open | incident `open` and untriaged > 1 day |
 | Done | `intent.md` `status: done` | — | — |
 
@@ -165,6 +167,33 @@ waiting on** from the artifacts. Nobody maintains a board by hand.
 
 Thresholds live in `flow.config.json` so they can be tuned without touching
 code.
+
+## Deploy model
+
+Every repo that ships (the platform's front door and each product) is
+connected to one Netlify site through Netlify's GitHub integration. No
+deploy tokens exist anywhere.
+
+| Branch | Netlify context | URL | Who moves it |
+|--------|-----------------|-----|--------------|
+| any PR | deploy preview | `deploy-preview-N--<site>.netlify.app` | the author |
+| `main` | branch deploy = **staging** | `main--<site>.netlify.app` | code owner, by merging |
+| `production` | production | `<site>.netlify.app` | the `release` workflow only, after gate 5 |
+
+- Every build writes `version.txt` containing the commit sha (`COMMIT_REF`
+  in `netlify.toml`). The `release` workflow waits for staging to serve the
+  sha, then holds at the `production` environment until the release manager
+  approves, then fast-forwards `production` and waits for the live site to
+  serve the sha. Approver, commit and time are a GitHub deployment record.
+- Netlify settings per site (set by a person, once): production branch
+  `production`; branch deploys include `main`; deploy previews on.
+- **Rollback.** Fast: the release manager publishes a previous deploy in
+  Netlify (Deploys → pick one → Publish deploy); the live site and the
+  `production` branch then differ until the next release, and the dashboard
+  shows both. Durable: a revert PR on `main`, released through gate 5.
+  `production` never moves backwards and never force-pushes.
+- Re-releasing a specific commit: run the `release` workflow by hand with
+  that sha (`workflow_dispatch`); the same approval applies.
 
 ## Roles
 

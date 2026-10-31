@@ -1,0 +1,44 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Fernhill Flow</title>
+<meta name="description" content="Fernhill Software — the Flow dashboard is on its way through the loop.">
+<style>
+  :root { --bg:#f6f4ef; --fg:#1e1c18; --muted:#6b665c; --accent:#b5543c; --card:#ffffff; --line:#e4dfd4; }
+  @media (prefers-color-scheme: dark) { :root:not([data-theme="light"]) { --bg:#15140f; --fg:#efeae0; --muted:#a29b8c; --accent:#e07a5f; --card:#1f1d17; --line:#2e2b23; } }
+  :root[data-theme="dark"] { --bg:#15140f; --fg:#efeae0; --muted:#a29b8c; --accent:#e07a5f; --card:#1f1d17; --line:#2e2b23; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--fg); font:16px/1.5 ui-sans-serif,system-ui,-apple-system,"Segoe UI",sans-serif; }
+  main { max-width:640px; margin:0 auto; padding:64px 16px; }
+  h1 { font-size:1.6rem; margin:0 0 4px; }
+  .sub { color:var(--muted); margin:0 0 32px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px; padding:20px 24px; }
+  .stage { display:flex; gap:8px; flex-wrap:wrap; margin:0 0 16px; padding:0; list-style:none; }
+  .stage li { font-size:.8rem; padding:4px 10px; border-radius:999px; border:1px solid var(--line); color:var(--muted); }
+  .stage li[aria-current] { border-color:var(--accent); color:var(--accent); font-weight:600; }
+  dl { display:grid; grid-template-columns:max-content 1fr; gap:6px 16px; margin:0; }
+  dt { color:var(--muted); }
+  a { color:var(--accent); }
+  footer { margin-top:32px; color:var(--muted); font-size:.85rem; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Fernhill Flow</h1>
+  <p class="sub">Where every Fernhill idea is, and what it is waiting on. The dashboard itself is the first idea through the loop.</p>
+  <section class="card" aria-labelledby="i1">
+    <ol class="stage" aria-label="Stages">
+      <li aria-current="step">1 Plan</li><li>2 Design</li><li>3 Build</li><li>4 Test</li><li>5 Deploy</li><li>6 Maintain</li>
+    </ol>
+    <dl>
+      <dt>Intent</dt><dd id="i1"><a href="https://github.com/nictuck/fernhill-platform/pull/1">0001 — Flow dashboard</a></dd>
+      <dt>State</dt><dd>Waiting on the product owner (gate 1: accept the intent)</dd>
+      <dt>Process</dt><dd><a href="https://github.com/nictuck/fernhill-platform/blob/main/docs/flow.md">docs/flow.md</a></dd>
+    </dl>
+  </section>
+  <footer>Fernhill Software · the company front door. The Flow dashboard will live at its own site (intent 0001).</footer>
+</main>
+</body>
+</html>

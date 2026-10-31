@@ -1,18 +1,20 @@
 #!/usr/bin/env bash
 # Create a product repo for an intent whose spec is accepted.
-#   scripts/new-product <slug> --intent <NNNN> [--title "Title"] [--private]
+#   scripts/new-product <slug> --intent <NNNN> [--title "Title"] [--site <netlify-site>] [--private]
 # Idempotent: safe to re-run after a partial failure.
+# --site is the Netlify site name you will create for it (default: the slug).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cfg() { jq -r ".$1" "$ROOT/flow.config.json"; }
 OWNER=$(cfg github_owner); TEMPLATE=$(cfg template_repo); PLATFORM=$(cfg platform_repo)
 PRODUCTS_DIR="$ROOT/../products"
 
-slug=""; intent=""; title=""; visibility="--public"
+slug=""; intent=""; title=""; site=""; visibility="--public"
 while [ $# -gt 0 ]; do
   case "$1" in
     --intent) intent="$2"; shift 2 ;;
     --title) title="$2"; shift 2 ;;
+    --site) site="$2"; shift 2 ;;
     --private) visibility="--private"; shift ;;
     -*) echo "unknown flag $1" >&2; exit 2 ;;
     *) slug="$1"; shift ;;
@@ -31,6 +33,7 @@ if [ "$spec_status" != "accepted" ]; then
   exit 1
 fi
 [ -n "$title" ] || title=$(sed -n 's/^title: *//p' "$intent_dir/intent.md" | head -1)
+[ -n "$site" ] || site="$slug"
 repo="$OWNER/$slug"; dest="$PRODUCTS_DIR/$slug"
 echo "→ product $repo for intent $intent ($title)"
 
@@ -57,7 +60,7 @@ if grep -rq '{{SLUG}}' README.md CLAUDE.md .sdlc.yaml 2>/dev/null; then
   git switch -c "setup/$intent" >/dev/null 2>&1 || git switch "setup/$intent"
   for f in README.md CLAUDE.md .sdlc.yaml; do
     sed -i '' -e "s/{{SLUG}}/$slug/g" -e "s/{{INTENT}}/$intent/g" -e "s/{{INTENT_DIR}}/$intent_dirname/g" \
-              -e "s/{{TITLE}}/$title/g" -e "s/{{DATE}}/$(date +%F)/g" "$f"
+              -e "s/{{TITLE}}/$title/g" -e "s/{{DATE}}/$(date +%F)/g" -e "s/{{SITE}}/$site/g" "$f"
   done
   git add -A && git commit -qm "setup: link $slug to intent $intent (plan-unchanged)"
   git push -qu origin "setup/$intent"
@@ -80,6 +83,17 @@ gh api -X PUT "repos/$repo/branches/main/protection" --silent \
 }
 JSON
 echo "  protected main (PR + green 'check' required, no force push, admins included)"
+
+# production branch: starts at main; afterwards only the release workflow moves it
+if ! git -C "$dest" ls-remote --exit-code --heads origin production >/dev/null 2>&1; then
+  git -C "$dest" push -q origin main:production
+  echo "  created production branch"
+fi
+gh api -X PUT "repos/$repo/branches/production/protection" --silent --input - <<'JSON'
+{ "required_status_checks": null, "enforce_admins": true, "required_pull_request_reviews": null,
+  "restrictions": null, "allow_force_pushes": false, "allow_deletions": false }
+JSON
+echo "  protected production (no force push, no deletion; moved only by the release workflow)"
 
 user_id=$(gh api user --jq .id)
 gh api -X PUT "repos/$repo/environments/production" --silent \
@@ -105,8 +119,10 @@ cat <<EOF
 
 Done. Only you can do the rest:
   1. Merge the two PRs (setup in $repo, link in $PLATFORM).
-  2. Netlify: create a site for $slug in team $(cfg netlify_team) (Netlify UI or \`netlify sites:create --name $slug\` in your own terminal),
-     then add repo secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID: gh secret set ... -R $repo  (your terminal, not Claude's).
+  2. Netlify (team $(cfg netlify_team)): Add new project → Import from GitHub → $repo, name it "$site",
+     accept the build settings from netlify.toml. Then Site configuration → Build & deploy →
+     Branches and deploy contexts: Production branch = production, Branch deploys = main, Deploy previews = any PR.
+     No tokens needed anywhere.
   3. Optional AI review: gh secret set ANTHROPIC_API_KEY -R $repo && gh variable set CLAUDE_REVIEW_ENABLED -b true -R $repo
   4. cd $dest && claude → /plan $intent
 EOF
