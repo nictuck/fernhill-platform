@@ -7,13 +7,14 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 TEMPLATE="${1:-$ROOT/../fernhill-product-template}"
 [ -d "$TEMPLATE" ] || { echo "template checkout not found: $TEMPLATE" >&2; exit 1; }
 
-mkdir -p "$TEMPLATE/.claude/hooks"
+mkdir -p "$TEMPLATE/.claude/hooks" "$TEMPLATE/.github/workflows"
 cp "$ROOT"/.claude/hooks/*.sh "$TEMPLATE/.claude/hooks/"
 cp "$ROOT/REVIEW.md" "$TEMPLATE/REVIEW.md"
+cp "$ROOT/.github/workflows/release.yml" "$TEMPLATE/.github/workflows/release.yml"
 
 # Product repos get the same hooks; permissions add the product commands.
 jq '.permissions.allow = (.permissions.allow + ["Bash(make build)","Bash(make test)","Bash(make lint)","Bash(make dev)","Bash(npm test*)","Bash(npm run *)","Bash(npx vitest*)"] | unique)
     | .permissions.allow -= ["Bash(scripts/personas *)","Bash(scripts/validate-artifacts *)"]' \
   "$ROOT/.claude/settings.json" > "$TEMPLATE/.claude/settings.json"
 
-echo "synced hooks, REVIEW.md and settings.json → $TEMPLATE"
+echo "synced hooks, REVIEW.md, release.yml and settings.json → $TEMPLATE"
