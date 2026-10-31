@@ -12,6 +12,9 @@ if [ "${1:-}" = "--test" ]; then
   run_case 2 "gh pr review --approve"   "$(bash_cmd_json 'gh pr review 12 --approve')" || fail=1
   run_case 2 "git push origin main"     "$(bash_cmd_json 'git push origin main')" || fail=1
   run_case 2 "git push HEAD:main"       "$(bash_cmd_json 'git push -u origin HEAD:main')" || fail=1
+  run_case 2 "git push to production"   "$(bash_cmd_json 'git push origin HEAD:production')" || fail=1
+  run_case 2 "git push origin production" "$(bash_cmd_json 'git push origin production')" || fail=1
+  run_case 2 "gh workflow run release"  "$(bash_cmd_json 'gh workflow run release.yml -f sha=abc')" || fail=1
   run_case 2 "gh api approve deploy"    "$(bash_cmd_json 'gh api -X POST repos/x/y/actions/runs/1/pending_deployments')" || fail=1
   run_case 2 "gh api review APPROVE"    "$(bash_cmd_json 'gh api repos/x/y/pulls/1/reviews -f event=APPROVE')" || fail=1
   run_case 0 "git push feature branch"  "$(bash_cmd_json 'git push -u origin intent/0001-flow')" || fail=1
@@ -26,7 +29,10 @@ input=$(hook_input)
 cmd=$(json_field "$input" '.tool_input.command')
 [ -n "$cmd" ] || exit 0
 
-reason="Blocked by no-merge hook: the agent has no route to main. A human merges, approves and releases in GitHub (docs/flow.md, gates 4-5)."
+reason="Blocked by no-merge hook: the agent has no route to main or production. A human merges, approves and releases in GitHub (docs/flow.md, gates 4-5)."
+
+# starting a release run is the release manager's act
+if printf '%s' "$cmd" | grep -Eq 'gh[[:space:]]+workflow[[:space:]]+run\b.*release'; then block "$reason"; fi
 
 # gh pr merge / gh pr review --approve
 if printf '%s' "$cmd" | grep -Eq '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+merge\b'; then block "$reason"; fi
@@ -34,8 +40,8 @@ if printf '%s' "$cmd" | grep -Eq '(^|[;&|[:space:]])gh[[:space:]]+pr[[:space:]]+
 # gh api routes that approve reviews or pending deployments
 if printf '%s' "$cmd" | grep -Eq 'gh[[:space:]]+api\b.*pending_deployments'; then block "$reason"; fi
 if printf '%s' "$cmd" | grep -Eq 'gh[[:space:]]+api\b.*/pulls/.*(APPROVE|/merge)'; then block "$reason"; fi
-# git push to main (origin main, HEAD:main, refs/heads/main, --delete main)
+# git push to main or production (origin main, HEAD:main, refs/heads/main, --delete main)
 if printf '%s' "$cmd" | grep -Eq '(^|[;&|[:space:]])git[[:space:]]+push\b' \
-   && printf '%s' "$cmd" | grep -Eq '(^|[[:space:]:/])main([[:space:]]|$)'; then block "$reason"; fi
+   && printf '%s' "$cmd" | grep -Eq '(^|[[:space:]:/])(main|production)([[:space:]]|$)'; then block "$reason"; fi
 
 exit 0

@@ -4,6 +4,7 @@
   "platform_repo": "fernhill-platform",
   "template_repo": "fernhill-product-template",
   "netlify_team": "nictuck",
+  "netlify_site": "fernhillplatform",
   "stuck_after_days": {
     "intent_pr_open": 3,
     "design_not_started": 5,

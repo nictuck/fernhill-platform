@@ -37,8 +37,8 @@ scripts/new-product flow --intent 0001
 # 4. Build — in the product repo, plan mode first, then implement
 cd ../products/flow && claude  →  /plan 0001
 
-# 5. Test + Deploy — CI on the PR; merge deploys staging; approve
-#    the "production" environment in GitHub to release
+# 5. Test + Deploy — CI on the PR; merging deploys staging (main--<site>);
+#    approve the "production" environment in the release run to ship
 
 # 6. Maintain — incidents become intents
 claude  →  /triage
