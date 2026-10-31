@@ -1,0 +1,7 @@
+# Code owners approve by merging (gate 4). One person today; this file is
+# where a second reviewer gets added when there is one.
+*                       @nictuck
+/intent/                @nictuck
+/personas/              @nictuck
+/.claude/               @nictuck
+/REVIEW.md              @nictuck

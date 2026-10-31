@@ -1,0 +1,112 @@
+#!/usr/bin/env bash
+# Create a product repo for an intent whose spec is accepted.
+#   scripts/new-product <slug> --intent <NNNN> [--title "Title"] [--private]
+# Idempotent: safe to re-run after a partial failure.
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+cfg() { jq -r ".$1" "$ROOT/flow.config.json"; }
+OWNER=$(cfg github_owner); TEMPLATE=$(cfg template_repo); PLATFORM=$(cfg platform_repo)
+PRODUCTS_DIR="$ROOT/../products"
+
+slug=""; intent=""; title=""; visibility="--public"
+while [ $# -gt 0 ]; do
+  case "$1" in
+    --intent) intent="$2"; shift 2 ;;
+    --title) title="$2"; shift 2 ;;
+    --private) visibility="--private"; shift ;;
+    -*) echo "unknown flag $1" >&2; exit 2 ;;
+    *) slug="$1"; shift ;;
+  esac
+done
+[ -n "$slug" ] && [ -n "$intent" ] || { echo "usage: scripts/new-product <slug> --intent <NNNN> [--title T] [--private]" >&2; exit 2; }
+[[ "$slug" =~ ^[a-z0-9-]+$ ]] || { echo "slug must be lowercase letters, digits, hyphens" >&2; exit 2; }
+
+# --- gate 2: spec accepted on main ------------------------------------------------
+intent_dir=$(ls -d "$ROOT"/intent/"$intent"-*/ 2>/dev/null | head -1 || true)
+[ -n "$intent_dir" ] || { echo "no intent $intent under intent/" >&2; exit 1; }
+intent_dir=${intent_dir%/}; intent_dirname=$(basename "$intent_dir")
+spec_status=$(git -C "$ROOT" show "origin/main:intent/$intent_dirname/spec.md" 2>/dev/null | sed -n 's/^status: *//p' | head -1 || true)
+if [ "$spec_status" != "accepted" ]; then
+  echo "gate 2 not passed: intent/$intent_dirname/spec.md on origin/main has status '${spec_status:-missing}', need 'accepted'" >&2
+  exit 1
+fi
+[ -n "$title" ] || title=$(sed -n 's/^title: *//p' "$intent_dir/intent.md" | head -1)
+repo="$OWNER/$slug"; dest="$PRODUCTS_DIR/$slug"
+echo "→ product $repo for intent $intent ($title)"
+
+# --- repo from template -------------------------------------------------------------
+mkdir -p "$PRODUCTS_DIR"
+if gh repo view "$repo" >/dev/null 2>&1; then
+  echo "  repo exists"
+else
+  gh repo create "$repo" --template "$OWNER/$TEMPLATE" $visibility --description "Fernhill product: $title (intent $intent)" >/dev/null
+  echo "  created $repo from $TEMPLATE"
+  sleep 3   # template generation is async
+fi
+if [ -d "$dest/.git" ]; then
+  echo "  clone exists at $dest"
+else
+  for i in 1 2 3 4 5; do gh repo clone "$repo" "$dest" >/dev/null 2>&1 && break || sleep 3; done
+  [ -d "$dest/.git" ] || { echo "clone failed" >&2; exit 1; }
+  echo "  cloned to $dest"
+fi
+
+# --- fill placeholders (on a branch; main is protected) ----------------------------------
+cd "$dest"
+if grep -rq '{{SLUG}}' README.md CLAUDE.md .sdlc.yaml 2>/dev/null; then
+  git switch -c "setup/$intent" >/dev/null 2>&1 || git switch "setup/$intent"
+  for f in README.md CLAUDE.md .sdlc.yaml; do
+    sed -i '' -e "s/{{SLUG}}/$slug/g" -e "s/{{INTENT}}/$intent/g" -e "s/{{INTENT_DIR}}/$intent_dirname/g" \
+              -e "s/{{TITLE}}/$title/g" -e "s/{{DATE}}/$(date +%F)/g" "$f"
+  done
+  git add -A && git commit -qm "setup: link $slug to intent $intent (plan-unchanged)"
+  git push -qu origin "setup/$intent"
+  gh pr create --title "setup: link to intent $intent" --body "Fills the template placeholders. Code owner: merge." >/dev/null
+  echo "  opened setup PR (merge it in GitHub)"
+fi
+
+# --- branch protection + production environment ----------------------------------------------
+gh api -X PUT "repos/$repo/branches/main/protection" --silent \
+  --input - <<'JSON'
+{
+  "required_status_checks": { "strict": true, "contexts": ["check"] },
+  "enforce_admins": true,
+  "required_pull_request_reviews": null,
+  "restrictions": null,
+  "allow_force_pushes": false,
+  "allow_deletions": false,
+  "required_linear_history": false,
+  "required_conversation_resolution": true
+}
+JSON
+echo "  protected main (PR + green 'check' required, no force push, admins included)"
+
+user_id=$(gh api user --jq .id)
+gh api -X PUT "repos/$repo/environments/production" --silent \
+  --input - <<JSON
+{ "reviewers": [ { "type": "User", "id": $user_id } ], "deployment_branch_policy": { "protected_branches": true, "custom_branch_policies": false } }
+JSON
+gh api -X PUT "repos/$repo/environments/staging" --silent --input - <<<'{}'
+echo "  environments: staging (auto), production (requires your approval)"
+
+# --- link the intent to the product (PR in the platform) -------------------------------------------
+cd "$ROOT"
+if ! grep -q "^product: \"$slug\"" "$intent_dir/intent.md"; then
+  git switch -c "link/$intent-$slug" >/dev/null 2>&1 || git switch "link/$intent-$slug"
+  sed -i '' "s/^product: .*/product: \"$slug\"/" "$intent_dir/intent.md"
+  git add "$intent_dir/intent.md" && git commit -qm "intent $intent: link product $slug"
+  git push -qu origin "link/$intent-$slug"
+  gh pr create --title "intent $intent: link product $slug" --body "Sets \`product:\` so the dashboard can follow this intent into its repo." >/dev/null
+  git switch main >/dev/null 2>&1
+  echo "  opened platform PR linking the intent (merge it in GitHub)"
+fi
+
+cat <<EOF
+
+Done. Only you can do the rest:
+  1. Merge the two PRs (setup in $repo, link in $PLATFORM).
+  2. Netlify: create a site for $slug in team $(cfg netlify_team) (Netlify UI or \`netlify sites:create --name $slug\` in your own terminal),
+     then add repo secrets NETLIFY_AUTH_TOKEN and NETLIFY_SITE_ID: gh secret set ... -R $repo  (your terminal, not Claude's).
+  3. Optional AI review: gh secret set ANTHROPIC_API_KEY -R $repo && gh variable set CLAUDE_REVIEW_ENABLED -b true -R $repo
+  4. cd $dest && claude → /plan $intent
+EOF

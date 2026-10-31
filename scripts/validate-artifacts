@@ -1,0 +1,131 @@
+#!/usr/bin/env node
+// Validate every artifact in this repo against docs/flow.md.
+//   scripts/validate-artifacts            checks shape only
+//   scripts/validate-artifacts --target main
+//                                         also refuses anything a human has
+//                                         not gated (status: proposed)
+// Exit 1 with one line per problem. No dependencies.
+'use strict';
+const fs = require('fs');
+const path = require('path');
+
+const ROOT = path.resolve(__dirname, '..');
+const targetMain = process.argv.includes('--target') &&
+  process.argv[process.argv.indexOf('--target') + 1] === 'main';
+const problems = [];
+const bad = (file, msg) => problems.push(`${file}: ${msg}`);
+
+function frontmatter(file) {
+  const text = fs.readFileSync(path.join(ROOT, file), 'utf8');
+  const m = text.match(/^---\n([\s\S]*?)\n---\n([\s\S]*)$/);
+  if (!m) { bad(file, 'missing frontmatter'); return null; }
+  const fm = {};
+  for (const line of m[1].split('\n')) {
+    const kv = line.match(/^([a-z_]+):\s*(.*)$/);
+    if (kv) fm[kv[1]] = kv[2].trim().replace(/^"(.*)"$/, '$1');
+  }
+  return { fm, body: m[2] };
+}
+
+function requireKeys(file, fm, keys) {
+  for (const k of keys) if (!(k in fm)) bad(file, `missing frontmatter key "${k}"`);
+}
+function requireEnum(file, fm, key, values) {
+  if (key in fm && !values.includes(fm[key])) bad(file, `${key} must be one of ${values.join('|')}, got "${fm[key]}"`);
+}
+function requireSections(file, body, sections) {
+  for (const s of sections) if (!new RegExp(`^## ${s}\\s*$`, 'm').test(body)) bad(file, `missing section "## ${s}"`);
+}
+function requireDate(file, fm, key) {
+  if (key in fm && !/^\d{4}-\d{2}-\d{2}$/.test(fm[key])) bad(file, `${key} must be YYYY-MM-DD`);
+}
+const exists = (p) => fs.existsSync(path.join(ROOT, p));
+const list = (dir, re) => exists(dir) ? fs.readdirSync(path.join(ROOT, dir)).filter((f) => re.test(f)).sort() : [];
+
+// ---- intents ---------------------------------------------------------------
+const intentDirs = list('intent', /^\d{4}-[a-z0-9-]+$/);
+const seenIds = new Set();
+for (const d of intentDirs) {
+  const id = d.slice(0, 4);
+  if (seenIds.has(id)) bad(`intent/${d}`, `duplicate id ${id}`);
+  seenIds.add(id);
+  const file = `intent/${d}/intent.md`;
+  if (!exists(file)) { bad(file, 'intent.md missing'); continue; }
+  const r = frontmatter(file); if (!r) continue;
+  requireKeys(file, r.fm, ['id', 'title', 'status', 'author', 'origin', 'product', 'created']);
+  if (r.fm.id !== id) bad(file, `id "${r.fm.id}" does not match directory "${id}"`);
+  requireEnum(file, r.fm, 'status', ['proposed', 'accepted', 'parked', 'rejected', 'done']);
+  requireEnum(file, r.fm, 'origin', ['idea', 'ticket', 'incident']);
+  requireDate(file, r.fm, 'created');
+  requireSections(file, r.body, ['Problem', 'Proposed outcome', 'Affected users and systems', 'Constraints', 'Open questions']);
+  if (targetMain && r.fm.status === 'proposed') bad(file, 'status is "proposed" — the product owner must set accepted|rejected|parked before this merges to main (gate 1)');
+
+  const spec = `intent/${d}/spec.md`;
+  if (exists(spec)) {
+    const s = frontmatter(spec); if (!s) continue;
+    requireKeys(spec, s.fm, ['intent', 'status', 'personas', 'flagged']);
+    if (s.fm.intent !== id) bad(spec, `intent "${s.fm.intent}" does not match directory "${id}"`);
+    requireEnum(spec, s.fm, 'status', ['proposed', 'accepted', 'superseded']);
+    if ('flagged' in s.fm && !/^\d+$/.test(s.fm.flagged)) bad(spec, 'flagged must be an integer');
+    requireSections(spec, s.body, ['Summary', 'Requirements', 'Design', 'Out of scope', 'Flagged concerns', 'Acceptance']);
+    const open = (s.body.match(/^- \[ \] /gm) || []).length;
+    if ('flagged' in s.fm && Number(s.fm.flagged) !== open) bad(spec, `flagged: ${s.fm.flagged} but ${open} unresolved "- [ ]" concerns in body`);
+    if (targetMain && s.fm.status === 'proposed') bad(spec, 'status is "proposed" — the product owner must set accepted before this merges to main (gate 2)');
+    if (targetMain && s.fm.status === 'accepted' && open > 0) bad(spec, `accepted with ${open} unresolved flagged concerns`);
+    if (r.fm.status === 'proposed') bad(spec, 'spec exists but intent is still proposed');
+  }
+}
+// ids must be sequential from 0001
+const ids = [...seenIds].sort();
+ids.forEach((id, i) => { if (Number(id) !== i + 1) bad(`intent/${id}-*`, `ids must be sequential; expected ${String(i + 1).padStart(4, '0')}`); });
+
+// ---- personas ----------------------------------------------------------------
+const personaFiles = list('personas', /^(?!README)[a-z0-9-]+\.md$/);
+const validGates = ['design', 'plan', 'review', 'release', 'triage'];
+for (const f of personaFiles) {
+  const file = `personas/${f}`;
+  const r = frontmatter(file); if (!r) continue;
+  requireKeys(file, r.fm, ['id', 'name', 'enabled', 'gates', 'owner']);
+  if (r.fm.id !== f.replace(/\.md$/, '')) bad(file, `id "${r.fm.id}" must equal file name`);
+  requireEnum(file, r.fm, 'enabled', ['true', 'false']);
+  if ('gates' in r.fm) {
+    const gates = r.fm.gates.replace(/^\[|\]$/g, '').split(',').map((s) => s.trim()).filter(Boolean);
+    for (const g of gates) if (!validGates.includes(g)) bad(file, `unknown gate "${g}"`);
+  }
+}
+if (personaFiles.length === 0) bad('personas/', 'no personas defined');
+
+// ---- incidents -----------------------------------------------------------------
+for (const f of list('incidents', /^\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/)) {
+  const file = `incidents/${f}`;
+  const r = frontmatter(file); if (!r) continue;
+  requireKeys(file, r.fm, ['product', 'severity', 'status', 'intent', 'opened']);
+  requireEnum(file, r.fm, 'severity', ['sev1', 'sev2', 'sev3']);
+  requireEnum(file, r.fm, 'status', ['open', 'fix-now', 'scheduled', 'dismissed', 'resolved']);
+  requireDate(file, r.fm, 'opened');
+  if (r.fm.status === 'dismissed' && !r.fm.reason) bad(file, 'dismissed without a reason');
+  if (r.fm.status !== 'open' && !r.fm.triaged_by) bad(file, `status ${r.fm.status} but triaged_by is empty`);
+  requireSections(file, r.body, ['What happened', 'Impact', 'Diagnosis', 'Recommendation']);
+}
+
+// ---- releases -------------------------------------------------------------------
+for (const f of list('releases', /^\d{4}-v\d+\.\d+\.\d+\.md$/)) {
+  const file = `releases/${f}`;
+  const r = frontmatter(file); if (!r) continue;
+  requireKeys(file, r.fm, ['intent', 'version', 'product', 'status', 'prepared']);
+  requireEnum(file, r.fm, 'status', ['proposed', 'authorized', 'rolled-back']);
+  if (!seenIds.has(r.fm.intent)) bad(file, `unknown intent ${r.fm.intent}`);
+}
+
+// ---- config ---------------------------------------------------------------------
+try { JSON.parse(fs.readFileSync(path.join(ROOT, 'flow.config.json'), 'utf8')); }
+catch (e) { bad('flow.config.json', e.message); }
+try { JSON.parse(fs.readFileSync(path.join(ROOT, '.claude/settings.json'), 'utf8')); }
+catch (e) { bad('.claude/settings.json', e.message); }
+
+if (problems.length) {
+  for (const p of problems) console.error(p);
+  console.error(`\n${problems.length} problem(s)`);
+  process.exit(1);
+}
+console.log(`validate-artifacts: ${intentDirs.length} intents, ${personaFiles.length} personas${targetMain ? ' (main gate checks on)' : ''}`);

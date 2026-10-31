@@ -1,0 +1,18 @@
+{
+  "company": "Fernhill Software",
+  "github_owner": "nictuck",
+  "platform_repo": "fernhill-platform",
+  "template_repo": "fernhill-product-template",
+  "netlify_team": "nictuck",
+  "stuck_after_days": {
+    "intent_pr_open": 3,
+    "design_not_started": 5,
+    "spec_pr_open": 3,
+    "plan_not_started": 5,
+    "branch_idle": 3,
+    "ci_red": 1,
+    "release_pending": 2,
+    "incident_untriaged": 1
+  },
+  "nit_cap": 5
+}

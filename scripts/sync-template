@@ -1,0 +1,19 @@
+#!/usr/bin/env bash
+# Copy the parts of the platform that every product repo must share into
+# the template checkout, so hooks and review policy never drift.
+#   scripts/sync-template [path-to-template-checkout]
+set -euo pipefail
+ROOT="$(cd "$(dirname "$0")/.." && pwd)"
+TEMPLATE="${1:-$ROOT/../fernhill-product-template}"
+[ -d "$TEMPLATE" ] || { echo "template checkout not found: $TEMPLATE" >&2; exit 1; }
+
+mkdir -p "$TEMPLATE/.claude/hooks"
+cp "$ROOT"/.claude/hooks/*.sh "$TEMPLATE/.claude/hooks/"
+cp "$ROOT/REVIEW.md" "$TEMPLATE/REVIEW.md"
+
+# Product repos get the same hooks; permissions add the product commands.
+jq '.permissions.allow = (.permissions.allow + ["Bash(make build)","Bash(make test)","Bash(make lint)","Bash(make dev)","Bash(npm test*)","Bash(npm run *)","Bash(npx vitest*)"] | unique)
+    | .permissions.allow -= ["Bash(scripts/personas *)","Bash(scripts/validate-artifacts *)"]' \
+  "$ROOT/.claude/settings.json" > "$TEMPLATE/.claude/settings.json"
+
+echo "synced hooks, REVIEW.md and settings.json → $TEMPLATE"
