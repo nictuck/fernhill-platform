@@ -16,11 +16,21 @@ if [ "${1:-}" = "--test" ]; then
   run_case 0 "netlify deploy (preview)"        "$(bash_cmd_json 'netlify deploy --dir=dist --alias=staging')" || fail=1
   run_case 0 "netlify status"                  "$(bash_cmd_json 'netlify status')" || fail=1
   run_case 0 "unrelated"                       "$(bash_cmd_json 'npm test')" || fail=1
+  run_case 2 "MCP netlify deploy-site"         "$(jq -cn '{tool_name:"mcp__368cbf47-b2a8-41e4-bb9b-71f0eb4d84c3__netlify-deploy-services-updater",tool_input:{selectSchema:{operation:"deploy-site"}}}')" || fail=1
+  run_case 0 "MCP netlify read tool"           "$(jq -cn '{tool_name:"mcp__368cbf47-b2a8-41e4-bb9b-71f0eb4d84c3__netlify-deploy-services-reader",tool_input:{}}')" || fail=1
   exit $fail
 fi
 
 input=$(hook_input)
-[ "$(json_field "$input" '.tool_name')" = "Bash" ] || exit 0
+tool=$(json_field "$input" '.tool_name')
+
+# The Netlify MCP connector can publish a site directly; that is a production
+# deploy without the gate, so it is blocked whatever the arguments.
+case "$tool" in
+  *netlify-deploy-services-updater*) block "Blocked by production-gate hook: the Netlify connector's deploy-site publishes straight to production. Releases go through the release workflow and the release manager's approval (docs/flow.md, Deploy model)." ;;
+esac
+
+[ "$tool" = "Bash" ] || exit 0
 cmd=$(json_field "$input" '.tool_input.command')
 [ -n "$cmd" ] || exit 0
 
