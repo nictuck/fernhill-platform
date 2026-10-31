@@ -1,0 +1,6 @@
+# Netlify site: fernhillplatform (team nictuck), connected to this repo.
+# Until the Flow dashboard has a build, the site is the static holding page
+# under public/. The dashboard's spec/plan will set the real build command.
+[build]
+  command = "echo 'no build step yet'"
+  publish = "public"
