@@ -25,8 +25,10 @@ for incidents. `/new-product` links an accepted spec to a new repo.
 - `status: proposed` is the author's claim. Only the product owner flips it
   to `accepted`, and only in the PR that merges it. Never flip it yourself.
 - All changes land through a PR. Never push to `main` or `production`,
-  never merge, never approve, never start a `release` run. Hooks block
-  this; CLAUDE.md is the reason. `main` is staging; `production` moves
+  never approve, never start a `release` run, and merge only when an
+  active exception in `exceptions/` grants it — after `/review`, naming
+  the exception in the merge body. Hooks block the rest; CLAUDE.md is the
+  reason. `main` is staging; `production` moves
   only when the release manager approves (docs/flow.md, Deploy model).
 - Personas are advisory. Quote their findings under "Flagged concerns"; do
   not resolve a concern on their behalf.

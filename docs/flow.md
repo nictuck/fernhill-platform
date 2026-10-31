@@ -130,7 +130,7 @@ visible and the agent's exclusion deterministic.
 | 1 | Intent accepted | Product owner | Flip `status: proposed → accepted`, merge PR to `main` | Merge commit author |
 | 2 | Spec accepted | Product owner (tech lead consulted when `flagged > 0`) | Flip `status → accepted`, merge PR | Merge commit |
 | 3 | Plan approved | Engineer | Accept in plan mode; set `status: approved`, `approved_by` | plan.md commit |
-| 4 | Code owner approval | Code owner | Merge the PR (CI green, review findings addressed) | PR merge |
+| 4 | Code owner approval | Code owner (delegable, see Exceptions) | Merge the PR (CI green, review findings addressed) | PR merge; review comment |
 | 5 | Release authorized | Release manager | Approve the `production` environment in the `release` workflow; it fast-forwards the `production` branch Netlify publishes | GitHub deployment record (approver, commit) |
 | 6 | Incident triage | On-call | Mark incident `fix-now`, `schedule` or `dismiss` (with reason) | incident file commit |
 
@@ -194,6 +194,28 @@ deploy tokens exist anywhere.
   `production` never moves backwards and never force-pushes.
 - Re-releasing a specific commit: run the `release` workflow by hand with
   that sha (`workflow_dispatch`); the same approval applies.
+
+## Exceptions
+
+A gate can be delegated to the agent for a bounded time by a file in
+[`exceptions/`](../exceptions/), merged by the human who owns the gate.
+Hooks read exceptions only from the platform's `origin/main`, so a
+delegation exists exactly when a human merged it and until it expires or
+is revoked. Each use leaves evidence: the `/review` comment on the PR and
+the merge commit body naming the exception id.
+
+What can be delegated: gate 4 (`grants: [merge]`), on the conditions in
+the exception file — a fresh-context review by the `tech-reviewer`
+persona, zero Important findings, green checks, and never for PRs that
+change the guardrails themselves (`.claude/`, `.github/`, `exceptions/`,
+`CODEOWNERS`, `REVIEW.md`, `personas/`).
+
+What cannot: gates 1, 2 and 5 (status flips and production approval),
+gate 3 (plan approval), pushes to `main` or `production`, starting
+`release` runs. Those stay with named humans in every configuration.
+
+The dashboard shows active exceptions on the Board, because a board that
+hides who is really merging is lying.
 
 ## Roles
 
