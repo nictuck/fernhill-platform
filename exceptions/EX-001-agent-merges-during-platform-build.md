@@ -1,7 +1,7 @@
 ---
 id: EX-001
 title: Agent reviews and merges PRs while the platform is being built
-status: proposed
+status: active
 grants: [merge]
 repos: [fernhill-platform, fernhill-product-template, fernhill-flow]
 authorized_by: Nicholas Tucker
