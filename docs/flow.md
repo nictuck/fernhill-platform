@@ -150,23 +150,36 @@ Rules enforced by hooks and CI, not by goodwill:
 
 ## Stage state machine
 
-The dashboard derives an intent's **stage**, **state** and **who it is
-waiting on** from the artifacts. Nobody maintains a board by hand.
+The dashboard derives an intent's **stage**, **state**, **stuck flag** and
+**who it is waiting on** from the artifacts. Nobody maintains a board by
+hand.
 
-| Stage | Entered when | Waiting on | Stuck when |
-|-------|--------------|------------|------------|
-| 1 Plan | PR adding `intent.md` is open | Product owner (gate 1) | PR open > 3 days |
-| 2 Design | `intent.md` on `main`, `status: accepted`, no `spec.md` on `main` | Product owner to run `/design`; then gate 2 | no spec PR within 5 days, or spec PR open > 3 days, or `flagged > 0` on an open spec PR |
-| 3 Build | `spec.md` accepted; product repo linked | Engineer to run `/plan`; then build | no `plan/` file within 5 days; branch with no commits for 3 days |
-| 4 Test | PR open in product repo | CI | CI red on latest push > 1 day |
-| 5 Deploy | PR merged | Staging live → release manager (gate 5) | `production` deployment pending approval > 2 days; `release` run failed |
-| 6 Maintain | Production deployment succeeded | On-call, when an incident file is open | incident `open` and untriaged > 1 day |
-| Done | `intent.md` `status: done` | — | — |
+**States.** An intent is in exactly one state: *Waiting on ‹role›* (a
+named human must act), *In progress* (an agent, CI or a build is working),
+*Live* (in production with no open incident), or *Done*. **Stuck** is a
+flag on top of a state, set when the stage's threshold is exceeded; a
+stuck intent still says who it is waiting on, and *Needs you* lists it
+first. The **clock** restarts when a stage is entered, at the event in the
+table. The **unit of evaluation** in Build, Test and Deploy is the
+intent's latest build PR (highest number, branch `build/NNNN-*`, same-repo
+only); earlier PRs do not count. Incidents attach to a **product**, not an
+intent: each open incident is one *Needs you* row under on-call, and every
+Maintain card on that product shows the count.
 
-`parked` and `rejected` leave the board (shown in an archive view).
+| Stage | Entered when | Clock starts | State / waiting on | Stuck when (threshold key) |
+|-------|--------------|--------------|--------------------|----------------------------|
+| 1 Plan | PR adding `intent.md` is open | PR opened | Waiting on product owner (gate 1) | open > `plan.pr_open_days` |
+| 2 Design | `intent.md` on `main`, `status: accepted`, no accepted `spec.md` on `main` | intent PR merged | no spec PR: waiting on product owner to run `/design`; spec PR open: waiting on product owner (gate 2) | no spec PR after `design.no_spec_pr_days`; spec PR open > `design.spec_pr_open_days` |
+| 3 Build | `spec.md` accepted on `main` | spec PR merged | `product: ""`: waiting on product owner to create the repo; no `plan/NNNN-*.md`: waiting on engineer to run `/plan`; plan approved, no PR yet: In progress | no repo after `build.no_repo_days`; no plan after `build.no_plan_days`; build branch idle > `build.branch_idle_days` |
+| 4 Test | latest build PR open | PR opened | CI running: In progress; CI red: waiting on engineer; CI green: waiting on code owner (gate 4) | CI red > `test.ci_red_days`; green and unmerged > `test.review_pending_days` |
+| 5 Deploy | latest build PR merged, its commit not in `production` | PR merged | staging job running: In progress; `production` environment pending: waiting on release manager (gate 5) | pending approval > `deploy.approval_pending_days`; `release` run failed (no timer) |
+| 6 Maintain | merge commit in `production` and served live (`version.txt`) | production deployment | no open incident on the product: Live; open incident: waiting on on-call (gate 6) | incident `open` > `maintain.untriaged_days` |
+| Done | `intent.md` `status: done` | — | Done | — |
 
-Thresholds live in `flow.config.json` so they can be tuned without touching
-code.
+`done`, `parked` and `rejected` leave the board (Done shows as a count
+that links to Archive). Thresholds live in `flow.config.json` →
+`thresholds`, one key per condition above, so they can be tuned without
+touching code. Active exceptions (see Exceptions) are shown on the board.
 
 ## Deploy model
 
