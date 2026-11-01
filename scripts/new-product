@@ -7,7 +7,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cfg() { jq -r ".$1" "$ROOT/flow.config.json"; }
 OWNER=$(cfg github_owner); TEMPLATE=$(cfg template_repo); PLATFORM=$(cfg platform_repo)
-PRODUCTS_DIR="$ROOT/../products"
+PRODUCTS_DIR="${PRODUCTS_DIR:-$ROOT/../products}"   # override for a second checkout
 
 slug=""; intent=""; title=""; site=""; visibility="--public"
 while [ $# -gt 0 ]; do
@@ -22,6 +22,7 @@ while [ $# -gt 0 ]; do
 done
 [ -n "$slug" ] && [ -n "$intent" ] || { echo "usage: scripts/new-product <slug> --intent <NNNN> [--title T] [--private]" >&2; exit 2; }
 [[ "$slug" =~ ^[a-z0-9-]+$ ]] || { echo "slug must be lowercase letters, digits, hyphens" >&2; exit 2; }
+[[ "$slug" == fernhill-* ]] || { echo "slug is the repo name and must start with fernhill- (e.g. fernhill-flow); got '$slug'" >&2; exit 2; }
 
 # --- gate 2: spec accepted on main ------------------------------------------------
 intent_dir=$(ls -d "$ROOT"/intent/"$intent"-*/ 2>/dev/null | head -1 || true)
