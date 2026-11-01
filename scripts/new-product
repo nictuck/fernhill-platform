@@ -1,13 +1,16 @@
 #!/usr/bin/env bash
 # Create a product repo for an intent whose spec is accepted.
 #   scripts/new-product <slug> --intent <NNNN> [--title "Title"] [--site <netlify-site>] [--private]
+# <slug> is the GitHub repo name and must start with "fernhill-" (e.g. fernhill-flow).
 # Idempotent: safe to re-run after a partial failure.
 # --site is the Netlify site name you will create for it (default: the slug).
+# PRODUCTS_DIR (env) overrides where the product is cloned (default: ../products).
 set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cfg() { jq -r ".$1" "$ROOT/flow.config.json"; }
 OWNER=$(cfg github_owner); TEMPLATE=$(cfg template_repo); PLATFORM=$(cfg platform_repo)
 PRODUCTS_DIR="${PRODUCTS_DIR:-$ROOT/../products}"   # override for a second checkout
+[[ "$PRODUCTS_DIR" = /* ]] || PRODUCTS_DIR="$PWD/$PRODUCTS_DIR"   # the script cd's later; keep it absolute
 
 slug=""; intent=""; title=""; site=""; visibility="--public"
 while [ $# -gt 0 ]; do
@@ -20,9 +23,9 @@ while [ $# -gt 0 ]; do
     *) slug="$1"; shift ;;
   esac
 done
-[ -n "$slug" ] && [ -n "$intent" ] || { echo "usage: scripts/new-product <slug> --intent <NNNN> [--title T] [--private]" >&2; exit 2; }
+[ -n "$slug" ] && [ -n "$intent" ] || { echo "usage: scripts/new-product fernhill-<slug> --intent <NNNN> [--title T] [--site S] [--private]" >&2; exit 2; }
 [[ "$slug" =~ ^[a-z0-9-]+$ ]] || { echo "slug must be lowercase letters, digits, hyphens" >&2; exit 2; }
-[[ "$slug" == fernhill-* ]] || { echo "slug is the repo name and must start with fernhill- (e.g. fernhill-flow); got '$slug'" >&2; exit 2; }
+[[ "$slug" =~ ^fernhill-[a-z0-9] ]] || { echo "slug is the repo name and must start with fernhill- (e.g. fernhill-flow); got '$slug'" >&2; exit 2; }
 
 # --- gate 2: spec accepted on main ------------------------------------------------
 intent_dir=$(ls -d "$ROOT"/intent/"$intent"-*/ 2>/dev/null | head -1 || true)
@@ -48,6 +51,9 @@ else
   sleep 3   # template generation is async
 fi
 if [ -d "$dest/.git" ]; then
+  # Never trust a directory that merely exists: it must be a clone of this product.
+  git -C "$dest" remote get-url origin 2>/dev/null | grep -qE "[/:]$OWNER/$slug(\.git)?$" \
+    || { echo "$dest exists but its origin is not $repo; move it aside or set PRODUCTS_DIR" >&2; exit 1; }
   echo "  clone exists at $dest"
 else
   for i in 1 2 3 4 5; do gh repo clone "$repo" "$dest" >/dev/null 2>&1 && break || sleep 3; done
