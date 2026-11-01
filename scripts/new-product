@@ -108,7 +108,10 @@ cd "$ROOT"
 if ! grep -q "^product: \"$slug\"" "$intent_dir/intent.md"; then
   git switch -c "link/$intent-$slug" >/dev/null 2>&1 || git switch "link/$intent-$slug"
   sed -i '' "s/^product: .*/product: \"$slug\"/" "$intent_dir/intent.md"
-  git add "$intent_dir/intent.md" && git commit -qm "intent $intent: link product $slug"
+  # register the repo and its site so the dashboard collects it (flow.config.json → repos[])
+  tmpcfg=$(mktemp)
+  jq --arg n "$slug" --arg s "$site" '.repos = ((.repos // []) | map(select(.name != $n))) + [{name: $n, site: $s, kind: "product"}]' flow.config.json > "$tmpcfg" && mv "$tmpcfg" flow.config.json
+  git add "$intent_dir/intent.md" flow.config.json && git commit -qm "intent $intent: link product $slug"
   git push -qu origin "link/$intent-$slug"
   gh pr create --title "intent $intent: link product $slug" --body "Sets \`product:\` so the dashboard can follow this intent into its repo." >/dev/null
   git switch main >/dev/null 2>&1
