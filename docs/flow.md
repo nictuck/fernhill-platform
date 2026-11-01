@@ -174,12 +174,13 @@ Maintain card on that product shows the count.
 | 4 Test | latest build PR open | PR opened | CI running: In progress; CI red: waiting on engineer; CI green: waiting on code owner (gate 4) | CI red > `test.ci_red_days`; green and unmerged > `test.review_pending_days` |
 | 5 Deploy | latest build PR merged, its commit not in `production` | PR merged | staging job running: In progress; `production` environment pending: waiting on release manager (gate 5) | pending approval > `deploy.approval_pending_days`; `release` run failed (no timer) |
 | 6 Maintain | merge commit in `production` and served live (`version.txt`) | production deployment | no open incident on the product: Live; open incident: waiting on on-call (gate 6) | incident `open` > `maintain.untriaged_days` |
-| Done | `intent.md` `status: done` | — | Done | — |
+| Done | `intent.md` `status: done` | the commit that set it | Done | — |
 
-`done`, `parked` and `rejected` leave the board (Done shows as a count
-that links to Archive). Thresholds live in `flow.config.json` →
-`thresholds`, one key per condition above, so they can be tuned without
-touching code. Active exceptions (see Exceptions) are shown on the board.
+Done intents stay in the Done column for `board.done_days` days (30),
+then appear only in Archive; `parked` and `rejected` go straight to
+Archive. Thresholds live in `flow.config.json` → `thresholds`, one key per
+condition above, so they can be tuned without touching code. Active
+exceptions (see Exceptions) are shown on the board.
 
 ## Deploy model
 

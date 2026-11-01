@@ -2,7 +2,7 @@
 intent: "0001"
 status: proposed
 personas: [compliance, security-lead, tech-lead, ux]
-flagged: 9
+flagged: 0
 ---
 
 ## Summary
@@ -22,9 +22,11 @@ Each requirement is pass/fail. "Intent" means a directory under
 `intent/` on the platform's `main`, or an open same-repo PR that adds one.
 
 - **R1 Board.** The home screen shows every intent exactly once, placed in
-  Plan, Design, Build, Test, Deploy or Maintain by the rules in
-  `docs/flow.md` → *Stage state machine*. `done`, `parked` and `rejected`
-  intents leave the board: Done appears as a count that links to Archive.
+  Plan, Design, Build, Test, Deploy, Maintain or Done by the rules in
+  `docs/flow.md` → *Stage state machine*. Done holds intents whose
+  `status: done` was set within the last `board.done_days` (30) days,
+  newest first, with a "Done: N older → Archive" footer; after that, and
+  for `parked` and `rejected` at any age, the intent is in Archive only.
 - **R2 State, flag and next action.** Every card shows one **state** —
   *Waiting on ‹role›*, *In progress*, *Live*, or *Done* — the days since
   the stage clock started (defined per stage in flow.md), a **Stuck** flag
@@ -87,8 +89,9 @@ Each requirement is pass/fail. "Intent" means a directory under
 - **R12 Form factor.** Usable at 375 px and on a wide monitor per the
   phone layout in *Design*; keyboard-navigable (a smoke test tabs to every
   card's action link); readable in light and dark.
-- **R13 Archive.** `done`, `parked` and `rejected` intents with their
-  final status, when it was set, and by whom.
+- **R13 Archive.** Every `done`, `parked` and `rejected` intent (including
+  those still in the Done column) with its final status, when it was set,
+  and by whom.
 - **R14 Ships through the loop.** This product passes gates 1 (done:
   intent accepted 2026-10-31), 2 (this spec), 3–5 in `fernhill-flow`, each
   leaving the evidence flow.md names. Its first production release is
@@ -102,8 +105,8 @@ Each requirement is pass/fail. "Intent" means a directory under
   warning. Collection uses branch-name classification first and
   files-changed only as a fallback, one tree fetch per repo, and
   conditional requests.
-- **R16 Config-driven.** Repos and their sites, the owner, and all
-  thresholds come from the platform's `flow.config.json` on `main`
+- **R16 Config-driven.** Repos and their sites, the owner, all
+  thresholds and the Done window come from the platform's `flow.config.json` on `main`
   (schema in *Design*). Deploy-time configuration is exactly
   `PLATFORM_REPO` and `GITHUB_TOKEN`. The engine is the only place the
   state machine is encoded; flow.md is its human-readable statement.
@@ -199,7 +202,8 @@ Security pass is visible.
     "test.ci_red_days": 1, "test.review_pending_days": 2,
     "deploy.approval_pending_days": 2, "maintain.untriaged_days": 1
   },
-  "refresh": { "interval_minutes": 10, "floor_seconds": 60 }
+  "refresh": { "interval_minutes": 10, "floor_seconds": 60 },
+  "board": { "done_days": 30 }
 }
 ```
 
@@ -212,7 +216,9 @@ R9 "repo not found" copy both say.
 The engine implements flow.md's state machine, evaluated Done → Maintain
 → Deploy → Test → Build → Design → Plan on the intent's latest build PR,
 taking the first match. Result: `{ intent, stage, state, waitingOn?,
-action?, clockStart, days, stuck: boolean, limit? }`.
+action?, clockStart, days, stuck: boolean, limit? }`. Done's clock is the
+commit that set `status: done`; its card shows that date and the days on
+the board, and the intent leaves the board once `days > board.done_days`.
 
 | Waiting on | Action copy | Link |
 |------------|-------------|------|
@@ -230,7 +236,7 @@ action?, clockStart, days, stuck: boolean, limit? }`.
 
 | Route | Primary question | Contents |
 |-------|------------------|----------|
-| `/` Board | What is waiting on me, and is anything stuck? | Needs you (R4); six stage sections (R1–R3), each header expandable in place (R6); Done count → Archive; active exceptions banner; freshness strip (R8) |
+| `/` Board | What is waiting on me, and is anything stuck? | Needs you (R4); seven stage sections (R1–R3) — six stages plus Done, each header expandable in place (R6); "Done: N older → Archive" footer; active exceptions banner; freshness strip (R8) |
 | `/intent/NNNN` | Where is this idea and what happened to it? | header (title, stage, state, action); timeline (R5) |
 | `/systems` | What is running where, and is production behind? | per-repo table or cards (R7); exceptions |
 | `/archive` | What did we decide not to do, or finish? | R13 |
@@ -239,12 +245,14 @@ Top bar: Board · Systems · Archive · freshness strip. "← Board" on Intent
 and Systems. Status badges always pair a label with the color.
 
 **Phone layout (≤ 600 px).** Board = Needs you, then stages as stacked
-sections; empty stages collapse to a one-line header with a count.
+sections; empty stages collapse to a one-line header with a count, and
+Done is collapsed to its header and count by default.
 Systems = one card per repo with staging and production as two rows.
 
 **The card.** Title · stage · state line ("Waiting on product owner for
 6 days · stuck, limit 3" / "In progress · 2 days" / "Live since 12 Oct ·
-no open incidents") · action line with link or copyable command.
+no open incidents" / "Done 12 Oct · 18 days on board") · action line with
+link or copyable command (none on Done cards).
 
 ### UI state copy
 
@@ -329,60 +337,67 @@ record.
 ## Flagged concerns
 
 Four personas were consulted; their 25 Important findings consolidate
-into the nine below. Each has a proposed resolution already drafted into
-this spec; the owner confirms by ticking the box and writing the
-resolution, or changes it.
+into the nine below. Each had a proposed resolution drafted into this
+spec; the product owner decided all nine on 2026-11-01 — eight as
+proposed, the Done column changed.
 
-- [ ] **tech-lead, ux**: the state vocabulary was untestable — *Stuck* as
+- [x] **tech-lead, ux**: the state vocabulary was untestable — *Stuck* as
   a peer of *Waiting on* lost the "who", *In progress* was undefined, no
   stage clock was defined, and shipped products sat as "In progress"
   forever. — *owner:* Nicholas Tucker — *proposed:* states are Waiting on
   / In progress / Live / Done with Stuck as a flag; per-stage clock start
-  defined; flow.md state machine amended in this PR — *resolution:*
-  pending
-- [ ] **tech-lead**: flow.md's state machine had holes the engine cannot
+  defined; flow.md state machine amended in this PR — *resolution:* as
+  proposed; flow.md § Stage state machine amended in this PR (2026-11-01)
+- [x] **tech-lead**: flow.md's state machine had holes the engine cannot
   implement literally: accepted spec with no product repo matched no row;
   Test waited on CI only (a green, unreviewed PR was never stuck);
   one-PR-per-intent assumption; incidents per intent duplicated Needs-you
   rows. — *owner:* Nicholas Tucker — *proposed:* Build pre-row for "no
   repo"; Test waits on CI then code owner with `test.review_pending_days`;
   latest build PR is the unit; incidents attach to the product; amended in
-  flow.md in this PR — *resolution:* pending
-- [ ] **ux**: Done was a seventh column that grows forever. — *owner:*
+  flow.md in this PR — *resolution:* as proposed; amended in flow.md in
+  this PR (2026-11-01)
+- [x] **ux**: Done was a seventh column that grows forever. — *owner:*
   Nicholas Tucker — *proposed:* done leaves the board as a count linking
-  to Archive; flow.md amended — *resolution:* pending
-- [ ] **security-lead, tech-lead** (decision 1): `POST /api/refresh` was
+  to Archive; flow.md amended — *resolution:* **changed** — Done stays on
+  the board as a seventh column for `board.done_days` (30) days after
+  `status: done`, then drops to Archive; `parked` and `rejected` go
+  straight to Archive. R1, R13, R16, the config schema, Screens, the card
+  and flow.md updated accordingly (2026-11-01)
+- [x] **security-lead, tech-lead** (decision 1): `POST /api/refresh` was
   public and unthrottled; ~85 requests/hour would exhaust the account's
   shared GitHub rate limit. — *owner:* Nicholas Tucker — *proposed:* keep
   it with a 60 s floor, single-flight lock, `X-Flow-Refresh` header and
   per-call log (R17); no scheduled function, stale-while-revalidate
-  instead — *resolution:* pending
-- [ ] **security-lead** (decision 2): the token was available to deploy
+  instead — *resolution:* as proposed; R17 stands (2026-11-01)
+- [x] **security-lead** (decision 2): the token was available to deploy
   previews, i.e. to fork PRs of a public repo. — *owner:* Nicholas Tucker
   — *proposed:* token only in `production` and `main` branch-deploy
   contexts; previews and `dev` render fixture data (R10) —
-  *resolution:* pending
-- [ ] **security-lead** (decision 3): PR content and config values were
+  *resolution:* as proposed; R10 stands (2026-11-01)
+- [x] **security-lead** (decision 3): PR content and config values were
   trusted inputs (fork PRs could place intents, choose repos and sites).
   — *owner:* Nicholas Tucker — *proposed:* the trust rule in R18: `main`
   trusted, PR content display-only, same-repo PRs only, schema validation
-  everywhere — *resolution:* pending
-- [ ] **security-lead** (decision 4), **compliance**: the token had no
+  everywhere — *resolution:* as proposed; R18 stands (2026-11-01)
+- [x] **security-lead** (decision 4), **compliance**: the token had no
   permission list, expiry or rotation owner, and deploy-time config
   changes left no record. — *owner:* Nicholas Tucker — *proposed:* exact
   permissions and ≤ 90-day expiry in R10; secrets inventory table;
   changes recorded in `releases/` first (compliance approval list already
-  extended) — *resolution:* pending
-- [ ] **security-lead, tech-lead, compliance**: one Blobs store shared by
+  extended) — *resolution:* as proposed — 90-day expiry, the product
+  owner rotates; R10 and the secrets inventory stand (2026-11-01)
+- [x] **security-lead, tech-lead, compliance**: one Blobs store shared by
   staging and production, no schema version, no rollback rehearsal — a
   staging test would write production's board and a rollback would read a
   newer snapshot. — *owner:* Nicholas Tucker — *proposed:* store keyed by
   context, `schemaVersion`, rollback paragraph and R14 rehearsal row —
-  *resolution:* pending
-- [ ] **ux**: no mock; the card, phone layout and UI-state copy were the
+  *resolution:* as proposed (2026-11-01)
+- [x] **ux**: no mock; the card, phone layout and UI-state copy were the
   design and were unwritten. — *owner:* Nicholas Tucker — *proposed:*
   copy table and phone layout added here; a static HTML mock is plan step
-  0, reviewed by the UX persona at the plan gate — *resolution:* pending
+  0, reviewed by the UX persona at the plan gate — *resolution:* as
+  proposed; the mock is plan step 0 (2026-11-01)
 
 Folded in without a concern (plainly right): R6 statistics cut until
 n ≥ 5; R7 shows the `production` branch head and rollback-in-effect; R15

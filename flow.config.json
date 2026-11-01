@@ -21,5 +21,6 @@
     "maintain.untriaged_days": 1
   },
   "refresh": { "interval_minutes": 10, "floor_seconds": 60 },
+  "board": { "done_days": 30 },
   "nit_cap": 5
 }
