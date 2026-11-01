@@ -28,10 +28,13 @@ Each requirement is pass/fail. "Intent" means a directory under
   newest first, with a "Done: N older → Archive" footer; after that, and
   for `parked` and `rejected` at any age, the intent is in Archive only.
 - **R2 State, flag and next action.** Every card shows one **state** —
-  *Waiting on ‹role›*, *In progress*, *Live*, or *Done* — the days since
-  the stage clock started (defined per stage in flow.md), a **Stuck** flag
-  when a threshold is exceeded ("Waiting on product owner for 6 days ·
-  stuck, limit 3"), and, when a person must act, one action line with a
+  *Waiting on ‹role›*, *In progress*, *Live*, or *Done* — with its days: for
+  a waiting state, the days the person has been waited on (the same number
+  the threshold measures, e.g. since the incident opened or the last push);
+  otherwise the days since the stage clock started (defined per stage in
+  flow.md; stage detail always shows time in stage), a **Stuck** flag when
+  a threshold is exceeded ("Waiting on product owner for 6 days · stuck,
+  limit 3"), and, when a person must act, one action line with a
   link to the exact page where it is done. Commands the person must run
   (`/design 0001`) are shown as copyable text with a *View intent* link,
   not as a link pretending to run them.
@@ -66,8 +69,9 @@ Each requirement is pass/fail. "Intent" means a directory under
   exceptions are listed here and on the Board.
 - **R8 Freshness.** Every screen shows the snapshot age. A snapshot older
   than `refresh.interval_minutes` triggers a background refresh when the
-  page is opened (stale-while-revalidate); *Refresh* triggers one on
-  demand. The previous snapshot stays visible while refreshing, labelled
+  page is opened (stale-while-revalidate — the page fires it against
+  `/api/refresh`, since a synchronous function cannot keep working after
+  it responds); *Refresh* triggers one on demand. The previous snapshot stays visible while refreshing, labelled
   "Showing snapshot from 3 min ago · refreshing…". A snapshot older than
   3× the interval shows the *stale* state.
 - **R9 States of the UI.** Each screen has loading, empty, error and
@@ -75,11 +79,12 @@ Each requirement is pass/fail. "Intent" means a directory under
   conveyed by color alone.
 - **R10 Read-only.** No write to GitHub. The only Netlify write is the
   dashboard's own snapshot in Blobs. The GitHub token is a fine-grained
-  PAT with exactly Metadata, Contents, Pull requests, Actions and
-  Deployments: read, on *Selected repositories* only, expiring in ≤ 90
-  days, set only in the `production` and `main` branch-deploy contexts of
-  Netlify (deploy previews and `dev` get none), and never sent to the
-  browser. Logs never contain request objects or headers.
+  PAT with exactly Metadata, Contents, Pull requests and Actions: read
+  (gate-5 approvers come from the run's approvals, not `/deployments`), on
+  *Selected repositories* only, expiring in ≤ 90 days, set only in
+  Netlify's `Production` scope and the branch-specific scope for `main`
+  (never all branch deploys, never deploy previews or `dev`), and never
+  sent to the browser. Logs never contain request objects or headers.
 - **R11 Derivation engine is pure and tested.** Stage, state, stuck,
   waiting-on and the action link are computed by pure, dependency-free
   functions from a snapshot. One fixture per flow.md state-machine row,
@@ -125,8 +130,8 @@ Each requirement is pass/fail. "Intent" means a directory under
   decides which repos and sites are fetched. Build/fix PRs count only
   when head repo = base repo (no forks). `version.txt` must match
   `^[0-9a-f]{40}$`. All strings render as text; the UI emits only links
-  the function constructed under `https://github.com/<owner>/` and the
-  configured sites.
+  accepted by the engine's allowlist (`https://github.com/<owner>/…` and
+  the configured sites), tested in the product repo.
 - **R19 Outbound calls are bounded.** Every fetch has a 5 s timeout, the
   refresh has a total budget under the function limit (or runs as a
   background function), destinations are exactly `api.github.com` and
@@ -149,8 +154,9 @@ Browser (static SPA) ──GET /api/flow──────▶ Function: flow
 - **Static SPA** (Vite + React + TypeScript). Single user, read-only, no
   login; the page holds no secrets.
 - **Two Netlify Functions** (TypeScript): `flow` and `refresh`; `flow`
-  imports the refresh module directly for stale-while-revalidate rather
-  than calling the public route. No scheduled function: one viewer does
+  imports the refresh module directly for the first load (no snapshot
+  yet); stale-while-revalidate is fired by the page against the public
+  route. No scheduled function: one viewer does
   not need 144 refreshes a day of a board nobody is watching.
 - **Netlify Blobs**, keyed by `process.env.CONTEXT` (`production`,
   `branch-deploy`, `deploy-preview`), holds `latest.json` and
@@ -227,9 +233,11 @@ the board, and the intent leaves the board once `days > board.done_days`.
 | product owner (gate 2) | "Accept spec NNNN (N concerns open)" | the spec PR |
 | product owner (no product repo) | `scripts/new-product ‹slug› --intent NNNN` (copyable) · *View spec* | the spec |
 | engineer (plan not started) | `/plan NNNN` (copyable) · *View repo* | the product repo |
+| engineer (plan proposed) | "Approve plan ‹path›" | the plan file |
 | engineer (CI red) | "CI failing on PR #N" | the failing check |
 | code owner (gate 4) | "Review and merge PR #N" | the PR |
 | release manager (gate 5) | "Approve production for run #N" | the run's review page |
+| release manager (release run failed) | "Release run #N failed" | the run |
 | on-call (gate 6) | "Triage incident ‹slug›" | the incident file or PR |
 
 ### Screens (four routes)
@@ -258,6 +266,7 @@ link or copyable command (none on Done cards).
 
 | State | Copy |
 |-------|------|
+| Loading | "Loading the board…" |
 | Empty board | "No intents yet. Run `/intent` in fernhill-platform to write the first one." |
 | Empty systems | "No product repos yet. `scripts/new-product` adds one." |
 | Nothing waits | "Nothing is waiting on you. 2 in progress, 0 stuck." |
@@ -310,7 +319,7 @@ Secrets inventory (copied into the product's CLAUDE.md):
 
 | Secret | Where | Contexts | Permissions | Repos | Expiry | Rotation |
 |--------|-------|----------|-------------|-------|--------|----------|
-| `GITHUB_TOKEN` | Netlify env var | `production`, `main` branch-deploy | Metadata, Contents, Pull requests, Actions, Deployments: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
+| `GITHUB_TOKEN` | Netlify env var | `Production`; branch-specific `main` | Metadata, Contents, Pull requests, Actions: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
 
 Rollback: fast — publish the previous deploy in Netlify; the board still
 renders because the snapshot schema is versioned and keyed by context;
