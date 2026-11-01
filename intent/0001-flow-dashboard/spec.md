@@ -66,8 +66,9 @@ Each requirement is pass/fail. "Intent" means a directory under
   exceptions are listed here and on the Board.
 - **R8 Freshness.** Every screen shows the snapshot age. A snapshot older
   than `refresh.interval_minutes` triggers a background refresh when the
-  page is opened (stale-while-revalidate); *Refresh* triggers one on
-  demand. The previous snapshot stays visible while refreshing, labelled
+  page is opened (stale-while-revalidate — the page fires it against
+  `/api/refresh`, since a synchronous function cannot keep working after
+  it responds); *Refresh* triggers one on demand. The previous snapshot stays visible while refreshing, labelled
   "Showing snapshot from 3 min ago · refreshing…". A snapshot older than
   3× the interval shows the *stale* state.
 - **R9 States of the UI.** Each screen has loading, empty, error and
@@ -125,8 +126,8 @@ Each requirement is pass/fail. "Intent" means a directory under
   decides which repos and sites are fetched. Build/fix PRs count only
   when head repo = base repo (no forks). `version.txt` must match
   `^[0-9a-f]{40}$`. All strings render as text; the UI emits only links
-  the function constructed under `https://github.com/<owner>/` and the
-  configured sites.
+  accepted by the engine's allowlist (`https://github.com/<owner>/…` and
+  the configured sites), tested in the product repo.
 - **R19 Outbound calls are bounded.** Every fetch has a 5 s timeout, the
   refresh has a total budget under the function limit (or runs as a
   background function), destinations are exactly `api.github.com` and
@@ -149,8 +150,9 @@ Browser (static SPA) ──GET /api/flow──────▶ Function: flow
 - **Static SPA** (Vite + React + TypeScript). Single user, read-only, no
   login; the page holds no secrets.
 - **Two Netlify Functions** (TypeScript): `flow` and `refresh`; `flow`
-  imports the refresh module directly for stale-while-revalidate rather
-  than calling the public route. No scheduled function: one viewer does
+  imports the refresh module directly for the first load (no snapshot
+  yet); stale-while-revalidate is fired by the page against the public
+  route. No scheduled function: one viewer does
   not need 144 refreshes a day of a board nobody is watching.
 - **Netlify Blobs**, keyed by `process.env.CONTEXT` (`production`,
   `branch-deploy`, `deploy-preview`), holds `latest.json` and
@@ -258,6 +260,7 @@ link or copyable command (none on Done cards).
 
 | State | Copy |
 |-------|------|
+| Loading | "Loading the board…" |
 | Empty board | "No intents yet. Run `/intent` in fernhill-platform to write the first one." |
 | Empty systems | "No product repos yet. `scripts/new-product` adds one." |
 | Nothing waits | "Nothing is waiting on you. 2 in progress, 0 stuck." |
