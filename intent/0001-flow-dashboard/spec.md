@@ -1,6 +1,6 @@
 ---
 intent: "0001"
-status: proposed
+status: accepted
 personas: [compliance, security-lead, tech-lead, ux]
 flagged: 0
 ---
