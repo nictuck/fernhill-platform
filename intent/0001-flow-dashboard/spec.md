@@ -28,10 +28,13 @@ Each requirement is pass/fail. "Intent" means a directory under
   newest first, with a "Done: N older → Archive" footer; after that, and
   for `parked` and `rejected` at any age, the intent is in Archive only.
 - **R2 State, flag and next action.** Every card shows one **state** —
-  *Waiting on ‹role›*, *In progress*, *Live*, or *Done* — the days since
-  the stage clock started (defined per stage in flow.md), a **Stuck** flag
-  when a threshold is exceeded ("Waiting on product owner for 6 days ·
-  stuck, limit 3"), and, when a person must act, one action line with a
+  *Waiting on ‹role›*, *In progress*, *Live*, or *Done* — with its days: for
+  a waiting state, the days the person has been waited on (the same number
+  the threshold measures, e.g. since the incident opened or the last push);
+  otherwise the days since the stage clock started (defined per stage in
+  flow.md; stage detail always shows time in stage), a **Stuck** flag when
+  a threshold is exceeded ("Waiting on product owner for 6 days · stuck,
+  limit 3"), and, when a person must act, one action line with a
   link to the exact page where it is done. Commands the person must run
   (`/design 0001`) are shown as copyable text with a *View intent* link,
   not as a link pretending to run them.
