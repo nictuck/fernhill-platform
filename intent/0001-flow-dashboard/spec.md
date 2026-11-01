@@ -76,11 +76,12 @@ Each requirement is pass/fail. "Intent" means a directory under
   conveyed by color alone.
 - **R10 Read-only.** No write to GitHub. The only Netlify write is the
   dashboard's own snapshot in Blobs. The GitHub token is a fine-grained
-  PAT with exactly Metadata, Contents, Pull requests, Actions and
-  Deployments: read, on *Selected repositories* only, expiring in ≤ 90
-  days, set only in the `production` and `main` branch-deploy contexts of
-  Netlify (deploy previews and `dev` get none), and never sent to the
-  browser. Logs never contain request objects or headers.
+  PAT with exactly Metadata, Contents, Pull requests and Actions: read
+  (gate-5 approvers come from the run's approvals, not `/deployments`), on
+  *Selected repositories* only, expiring in ≤ 90 days, set only in
+  Netlify's `Production` scope and the branch-specific scope for `main`
+  (never all branch deploys, never deploy previews or `dev`), and never
+  sent to the browser. Logs never contain request objects or headers.
 - **R11 Derivation engine is pure and tested.** Stage, state, stuck,
   waiting-on and the action link are computed by pure, dependency-free
   functions from a snapshot. One fixture per flow.md state-machine row,
@@ -229,9 +230,11 @@ the board, and the intent leaves the board once `days > board.done_days`.
 | product owner (gate 2) | "Accept spec NNNN (N concerns open)" | the spec PR |
 | product owner (no product repo) | `scripts/new-product ‹slug› --intent NNNN` (copyable) · *View spec* | the spec |
 | engineer (plan not started) | `/plan NNNN` (copyable) · *View repo* | the product repo |
+| engineer (plan proposed) | "Approve plan ‹path›" | the plan file |
 | engineer (CI red) | "CI failing on PR #N" | the failing check |
 | code owner (gate 4) | "Review and merge PR #N" | the PR |
 | release manager (gate 5) | "Approve production for run #N" | the run's review page |
+| release manager (release run failed) | "Release run #N failed" | the run |
 | on-call (gate 6) | "Triage incident ‹slug›" | the incident file or PR |
 
 ### Screens (four routes)
@@ -313,7 +316,7 @@ Secrets inventory (copied into the product's CLAUDE.md):
 
 | Secret | Where | Contexts | Permissions | Repos | Expiry | Rotation |
 |--------|-------|----------|-------------|-------|--------|----------|
-| `GITHUB_TOKEN` | Netlify env var | `production`, `main` branch-deploy | Metadata, Contents, Pull requests, Actions, Deployments: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
+| `GITHUB_TOKEN` | Netlify env var | `Production`; branch-specific `main` | Metadata, Contents, Pull requests, Actions: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
 
 Rollback: fast — publish the previous deploy in Netlify; the board still
 renders because the snapshot schema is versioned and keyed by context;
