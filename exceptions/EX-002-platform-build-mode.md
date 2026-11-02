@@ -1,7 +1,7 @@
 ---
 id: EX-002
 title: Platform build mode — the agent passes gates 1, 2, 3 and 5 and merges guardrail changes
-status: proposed
+status: active
 grants: [merge, merge-guardrails, flip-status, approve-plan, release]
 repos: [fernhill-platform, fernhill-product-template, fernhill-flow]
 authorized_by: Nicholas Tucker
