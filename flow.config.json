@@ -6,7 +6,16 @@
   "netlify_team": "nictuck",
   "netlify_site": "fernhillplatform",
   "repos": [
-    { "name": "fernhill-platform", "site": "fernhillplatform", "kind": "platform" }
+    {
+      "name": "fernhill-platform",
+      "site": "fernhillplatform",
+      "kind": "platform"
+    },
+    {
+      "name": "fernhill-flow",
+      "site": "fernhill-flow",
+      "kind": "product"
+    }
   ],
   "thresholds": {
     "plan.pr_open_days": 3,
@@ -20,7 +29,12 @@
     "deploy.approval_pending_days": 2,
     "maintain.untriaged_days": 1
   },
-  "refresh": { "interval_minutes": 10, "floor_seconds": 60 },
-  "board": { "done_days": 30 },
+  "refresh": {
+    "interval_minutes": 10,
+    "floor_seconds": 60
+  },
+  "board": {
+    "done_days": 30
+  },
   "nit_cap": 5
 }

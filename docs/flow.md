@@ -231,15 +231,20 @@ GitHub identity for the agent (or an organization account); until then
 this is a known, accepted limit. Each use leaves evidence: the `/review` comment on the PR and
 the merge commit body naming the exception id.
 
-What can be delegated: gate 4 (`grants: [merge]`), on the conditions in
-the exception file — a fresh-context review by the `tech-reviewer`
-persona, zero Important findings, green checks, and never for PRs that
-change the guardrails themselves (`.claude/`, `.github/`, `exceptions/`,
-`CODEOWNERS`, `REVIEW.md`, `personas/`).
+What can be delegated, each by an explicit grant in the exception file and
+always with the fresh-context persona review kept: gate 4 (`merge`;
+`merge-guardrails` additionally for PRs that change `.claude/`, `.github/`,
+`exceptions/`, `CODEOWNERS`, `REVIEW.md`, `personas/`, with the files named
+in the merge body), gates 1–2 (`flip-status`), gate 3 (`approve-plan`,
+`approved_by: "agent under EX-NNN"`), and gate 5 (`release`: the `release`
+workflow fast-forwards `production` without a required reviewer, logging
+the exception id). EX-001 delegates `merge` only; EX-002 ("platform build
+mode") delegates all of them for the build-out period.
 
-What cannot: gates 1, 2 and 5 (status flips and production approval),
-gate 3 (plan approval), pushes to `main` or `production`, starting
-`release` runs. Those stay with named humans in every configuration.
+What cannot, in any configuration: secrets and tokens, pushes to `main`
+or `production` outside the release workflow, force-pushes and deletions,
+branch protection, and editing or revoking the exceptions themselves.
+Those stay with named humans.
 
 The dashboard shows active exceptions on the Board, because a board that
 hides who is really merging is lying.

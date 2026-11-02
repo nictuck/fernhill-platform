@@ -4,7 +4,7 @@ title: Flow dashboard
 status: accepted
 author: Nicholas Tucker
 origin: idea
-product: ""
+product: "fernhill-flow"
 created: 2026-10-31
 ---
 
