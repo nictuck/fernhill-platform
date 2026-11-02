@@ -9,9 +9,13 @@ on the dashboard. Nothing is delegated by conversation alone.
 - `status: proposed` on the branch; the authorizing human sets `active`
   and merges. CI refuses `proposed` on `main`. Revoke by setting
   `revoked` in a PR; expiry is automatic by date.
-- `grants` names what the agent may do. Hooks honor only what is listed:
-  `merge` lets `gh pr merge` through when the merge body names the
-  exception id, so every merge commit records which exception allowed it.
+- `grants` names what the agent may do. Hooks and CI honor only what is
+  listed: `merge` lets `gh pr merge` through when the merge body names the
+  exception id, so every merge commit records which exception allowed it;
+  `merge-guardrails` extends it to guardrail paths when the body also lists
+  the files; `flip-status` and `approve-plan` let the agent sign gates 1–3
+  (the signing commit quotes the persona verdicts); `release` lets the
+  `release` workflow fast-forward `production` with no required reviewer.
 - Hooks read the exception through the GitHub API from
   `nictuck/fernhill-platform` at `main` — the repo name is hardcoded in the
   hook, so nothing in a working tree, a local ref, a branch or the
@@ -21,10 +25,9 @@ on the dashboard. Nothing is delegated by conversation alone.
   on `main`, no force-push or deletion on `production`, and the
   environment's required reviewer (see docs/flow.md → Exceptions for the
   one known gap on personal accounts).
-- Exceptions never cover: status flips on `intent.md` / `spec.md` (gates 1
-  and 2), production approval (gate 5), pushes to `main` or `production`,
-  or PRs that change the guardrails themselves (`.claude/`, hooks,
-  workflows, `exceptions/`, `CODEOWNERS`, branch protection).
+- Exceptions never cover: secrets and tokens, pushes to `main` or
+  `production` outside the release workflow, force-pushes, deletions,
+  branch protection, or editing and revoking the exceptions themselves.
 
 ```yaml
 ---

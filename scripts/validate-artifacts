@@ -132,7 +132,8 @@ for (const f of exceptionFiles) {
   requireDate(file, r.fm, 'granted'); requireDate(file, r.fm, 'expires');
   if ('grants' in r.fm) {
     const grants = r.fm.grants.replace(/^\[|\]$/g, '').split(',').map((s) => s.trim()).filter(Boolean);
-    for (const g of grants) if (!['merge'].includes(g)) bad(file, `unknown grant "${g}" (hooks honor: merge)`);
+    const KNOWN = ['merge', 'merge-guardrails', 'flip-status', 'approve-plan', 'release'];
+    for (const g of grants) if (!KNOWN.includes(g)) bad(file, `unknown grant "${g}" (known: ${KNOWN.join(', ')})`);
     if (grants.length === 0) bad(file, 'grants is empty');
   }
   if (r.fm.granted && r.fm.expires && r.fm.expires <= r.fm.granted) bad(file, 'expires must be after granted');
