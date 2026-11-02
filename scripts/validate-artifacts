@@ -112,9 +112,13 @@ for (const f of list('incidents', /^\d{4}-\d{2}-\d{2}-[a-z0-9-]+\.md$/)) {
 for (const f of list('releases', /^\d{4}-v\d+\.\d+\.\d+\.md$/)) {
   const file = `releases/${f}`;
   const r = frontmatter(file); if (!r) continue;
-  requireKeys(file, r.fm, ['intent', 'version', 'product', 'status', 'prepared']);
+  requireKeys(file, r.fm, ['intent', 'version', 'product', 'status', 'prepared', 'commit']);
   requireEnum(file, r.fm, 'status', ['proposed', 'authorized', 'rolled-back']);
   if (!seenIds.has(r.fm.intent)) bad(file, `unknown intent ${r.fm.intent}`);
+  // The release workflow matches `commit` byte for byte against the sha it
+  // releases; a short or malformed sha would hold a delegated release forever.
+  if ('commit' in r.fm && !/^[0-9a-f]{40}$/.test(r.fm.commit)) bad(file, `commit "${r.fm.commit}" must be the full 40-hex sha being released`);
+  if (r.fm.status === 'authorized') for (const k of ['released', 'release_run', 'authorized_by']) if (!r.fm[k]) bad(file, `status authorized but ${k} is empty`);
 }
 
 // ---- exceptions ------------------------------------------------------------------
