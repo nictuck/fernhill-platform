@@ -98,7 +98,7 @@ jobs:
       !cancelled() && needs.resolve.result == 'success' && needs.resolve.outputs.site != ''
       && (needs.staging.result == 'success' || needs.staging.result == 'skipped')
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 25    # two waits of WAIT_ATTEMPTS × 15 s (record, then Netlify) must both fit
     permissions:
       contents: write      # the only job that pushes, and only to refs/heads/production
       deployments: write
@@ -171,6 +171,7 @@ jobs:
           echo "waiting for a record on $PLATFORM_REPO main: releases/NNNN-vX.Y.Z.md with product: $repo, commit: $SHA, status: proposed|authorized"
           seen=""   # blob shas already read and found not to match; a record is fetched again only when it changes
           for i in $(seq 1 "$WAIT_ATTEMPTS"); do
+            listing=$(gh api "repos/$PLATFORM_REPO/contents/releases?ref=main" --jq '.[] | "\(.name) \(.sha)"') || echo "::warning::could not list $PLATFORM_REPO/releases on main (attempt $i); the gate stays closed until it can be read"
             while read -r f blob; do
               printf '%s' "$f" | grep -Eq '^[0-9]{4}-v[0-9]+\.[0-9]+\.[0-9]+\.md$' || continue
               case " $seen " in *" $blob "*) continue;; esac
@@ -183,7 +184,7 @@ jobs:
               case "$status" in proposed|authorized) ;; *) continue;; esac
               echo "::notice::release gate: delegated under $DELEGATED; evidence $PLATFORM_REPO/releases/$f (status: $status) names $SHA for $repo"
               exit 0
-            done < <(gh api "repos/$PLATFORM_REPO/contents/releases?ref=main" --jq '.[] | "\(.name) \(.sha)"' 2>/dev/null)
+            done <<< "$listing"
             echo "  attempt $i: no record on $PLATFORM_REPO main names $SHA for $repo yet"; sleep 15
           done
           echo "::error::no release record on $PLATFORM_REPO main names $SHA for $repo. Under $DELEGATED the record is the gate's evidence: run /release on the platform (releases/NNNN-vX.Y.Z.md with product: $repo, commit: $SHA, status: proposed), merge it, then re-run this job."

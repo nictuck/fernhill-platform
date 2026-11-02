@@ -138,12 +138,14 @@ gate 5 has not passed; `authorized` means `production` serves `commit`
 manager holds the gate, the record precedes their approval and GitHub
 records the approval itself. When an exception delegates gate 5
 (`release` grant), no person approves, so the record is the gate's only
-evidence and the ordering flips: `/review` merges the product PR, writes
-the record naming the merge commit in the same step, and merges it; the
-product's `release` workflow refuses to fast-forward `production` until a
+evidence and the ordering flips: as soon as `/review` has merged the
+product PR, the person runs `/release <id> <version>` on the platform with
+the merge commit, and the record is reviewed and merged before `production`
+moves; the product's `release` workflow refuses to fast-forward until a
 record on this repo's `main` names that repo in `product:` and that exact
 sha in `commit:` with status `proposed` or `authorized`, and it waits for
-one for as long as it waits for staging. The platform's own front door has
+one for as long as it waits for staging (a run that timed out is re-run
+once the record is in). The platform's own front door has
 no intent and no record; it is the one site that releases under a
 delegated gate on the exception id alone.
 

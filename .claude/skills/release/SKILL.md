@@ -97,12 +97,14 @@ sets `status: authorized` with `released`, `release_run` and
 ## Delegated (an active exception grants `release`)
 
 The workflow is already running the moment the product PR merges, so the
-record is written in the same `/review` step that merges it, before
-anything else:
+record comes next, before anything else. `/review` cannot start this skill
+(it is run by a person), so `/review` ends by saying so:
 
-1. `/review` merges the product PR (gate 4). `gh pr view N --json
-   mergeCommit` gives the sha; that is `commit:`.
-2. Run this skill at once (steps 1–5) while the run waits for staging.
+1. `/review` merges the product PR (gate 4) and reports the merge sha
+   (`gh pr view N --json mergeCommit`) with the instruction to run this
+   skill now; that sha is `commit:`.
+2. The person runs `/release <id> <version>` at once; steps 1–5 happen
+   while the run waits for staging.
 3. `/review` the record PR and merge it under the exception
    (`Merged under EX-NNN after /review: …`). The product's `release` run
    polls the platform's `main` for the record for ten minutes after
