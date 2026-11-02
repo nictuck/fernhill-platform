@@ -82,9 +82,9 @@ Each requirement is pass/fail. "Intent" means a directory under
   PAT with exactly Metadata, Contents, Pull requests and Actions: read
   (gate-5 approvers come from the run's approvals, not `/deployments`), on
   *Selected repositories* only, expiring in ≤ 90 days, set only in
-  Netlify's `Production` scope and the branch-specific scope for `main`
-  (never all branch deploys, never deploy previews or `dev`), and never
-  sent to the browser. Logs never contain request objects or headers.
+  Netlify's `Production` and `Branch deploys` contexts (`main` is the
+  only allowed branch; Netlify reserves it for branch values), never in
+  deploy previews or `dev`, and never sent to the browser. Logs never contain request objects or headers.
 - **R11 Derivation engine is pure and tested.** Stage, state, stuck,
   waiting-on and the action link are computed by pure, dependency-free
   functions from a snapshot. One fixture per flow.md state-machine row,
@@ -319,7 +319,7 @@ Secrets inventory (copied into the product's CLAUDE.md):
 
 | Secret | Where | Contexts | Permissions | Repos | Expiry | Rotation |
 |--------|-------|----------|-------------|-------|--------|----------|
-| `GITHUB_TOKEN` | Netlify env var | `Production`; branch-specific `main` | Metadata, Contents, Pull requests, Actions: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
+| `GITHUB_TOKEN` | Netlify env var | `Production`, `Branch deploys` (main only allowed) | Metadata, Contents, Pull requests, Actions: read | selected: platform + products | ≤ 90 days | release manager; recorded in `releases/` before the change |
 
 Rollback: fast — publish the previous deploy in Netlify; the board still
 renders because the snapshot schema is versioned and keyed by context;
