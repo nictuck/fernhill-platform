@@ -63,11 +63,12 @@ steps below are the same; the ordering and the last step differ.
    (`https://main--<site>.netlify.app`) once it serves the commit and
    verify the spec's Acceptance items that can be checked by hand. Record
    what you checked and what you could not. Netlify branch deploys have no
-   publish pointer, so a rollback rehearsal cannot happen on staging: it
-   is done on production, against the previous real deploy (publish it,
-   confirm `version.txt` and the page, re-publish the current deploy), at
-   the first release where such a deploy exists. Record the result, or
-   that it has not been done. Where a spec asks for a staging rehearsal
+   publish pointer, so a rollback rehearsal cannot happen on staging: the
+   release manager does it in Netlify, on production, against the previous
+   real deploy (publish it, confirm `version.txt` and the page, re-publish
+   the current deploy), at the first release where such a deploy exists;
+   the `production-gate` hook keeps you from doing it. Record the result,
+   or that it has not been done. Where a spec asks for a staging rehearsal
    (fernhill-flow spec R14), note the mismatch in the record; amending the
    spec is a design-gate change for the product owner, not yours.
 3. **Consult personas** with `release` in `gates` (enabled only), as
@@ -108,7 +109,9 @@ anything else:
    staging is live and fast-forwards when it finds one with this repo's
    name in `product:`, this sha in `commit:` and status `proposed` or
    `authorized`. If the run timed out first, merge the record and
-   `gh run rerun <run id> --failed`.
+   `gh run rerun <run id> --failed`: the hook allows reruns because the
+   record check and the environment gate still hold on a rerun, which is
+   not true of `gh workflow run` or a dispatch, which it blocks.
 4. When the run is green and production serves the commit, a follow-up PR
    sets `status: authorized`, `released`, `release_run` and
    `authorized_by: "delegated under EX-NNN"`.

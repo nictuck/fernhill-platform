@@ -150,8 +150,10 @@ jobs:
       # this repo (product:) and this exact commit (commit:) with status
       # proposed or authorized. /review writes it right after the merge; this
       # job waits for it the way `staging` waits for Netlify. The platform's
-      # own front door (no .sdlc.yaml) has no intent and no record: it is the
-      # one site that releases on the exception id alone, and says so.
+      # own front door has no intent and no record: it is the one site that
+      # releases on the exception id alone, and says so. The exemption is
+      # keyed on the repo's identity (the hardcoded anchor), never on a file
+      # in the repo being released.
       - name: Under a delegated gate, hold until a release record names this commit
         if: steps.gate.outputs.delegated != ''
         env:
@@ -159,16 +161,21 @@ jobs:
           PLATFORM_REPO: nictuck/fernhill-platform
           DELEGATED: ${{ steps.gate.outputs.delegated }}
         run: |
-          if [ ! -f .sdlc.yaml ]; then
-            echo "::warning::release gate: $GITHUB_REPOSITORY is the platform (no .sdlc.yaml); its front door releases under $DELEGATED with no release record"
+          if [ "$GITHUB_REPOSITORY" = "$PLATFORM_REPO" ]; then
+            echo "::warning::release gate: $GITHUB_REPOSITORY is the platform; its front door releases under $DELEGATED with no release record"
             exit 0
           fi
           repo="${GITHUB_REPOSITORY#*/}"
-          field() { printf '%s\n' "$1" | sed -n "s/^$2: *//p" | head -1 | tr -d '"' | sed 's/[[:space:]]*$//'; }
+          # one frontmatter value: first match, trailing comment and quotes dropped
+          field() { printf '%s\n' "$1" | sed -n "s/^$2: *//p" | head -1 | sed 's/[[:space:]]*#.*$//' | tr -d '"' | sed 's/[[:space:]]*$//'; }
           echo "waiting for a record on $PLATFORM_REPO main: releases/NNNN-vX.Y.Z.md with product: $repo, commit: $SHA, status: proposed|authorized"
+          seen=""   # blob shas already read and found not to match; a record is fetched again only when it changes
           for i in $(seq 1 "$WAIT_ATTEMPTS"); do
-            for f in $(gh api "repos/$PLATFORM_REPO/contents/releases?ref=main" --jq '.[].name' 2>/dev/null | grep -E '^[0-9]{4}-v[0-9]+\.[0-9]+\.[0-9]+\.md$'); do
+            while read -r f blob; do
+              printf '%s' "$f" | grep -Eq '^[0-9]{4}-v[0-9]+\.[0-9]+\.[0-9]+\.md$' || continue
+              case " $seen " in *" $blob "*) continue;; esac
               text=$(gh api "repos/$PLATFORM_REPO/contents/releases/$f?ref=main" --jq .content 2>/dev/null | base64 -d) || continue
+              seen="$seen $blob"
               fm=$(printf '%s\n' "$text" | awk 'NR==1 && $0=="---"{f=1;next} f && $0=="---"{exit} f')
               [ "$(field "$fm" product)" = "$repo" ] || continue
               [ "$(field "$fm" commit)" = "$SHA" ] || continue
@@ -176,7 +183,7 @@ jobs:
               case "$status" in proposed|authorized) ;; *) continue;; esac
               echo "::notice::release gate: delegated under $DELEGATED; evidence $PLATFORM_REPO/releases/$f (status: $status) names $SHA for $repo"
               exit 0
-            done
+            done < <(gh api "repos/$PLATFORM_REPO/contents/releases?ref=main" --jq '.[] | "\(.name) \(.sha)"' 2>/dev/null)
             echo "  attempt $i: no record on $PLATFORM_REPO main names $SHA for $repo yet"; sleep 15
           done
           echo "::error::no release record on $PLATFORM_REPO main names $SHA for $repo. Under $DELEGATED the record is the gate's evidence: run /release on the platform (releases/NNNN-vX.Y.Z.md with product: $repo, commit: $SHA, status: proposed), merge it, then re-run this job."
