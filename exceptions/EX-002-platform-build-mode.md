@@ -7,7 +7,7 @@ repos: [fernhill-platform, fernhill-product-template, fernhill-flow]
 authorized_by: Nicholas Tucker
 role: product owner, engineer, code owner, release manager
 granted: 2026-11-02
-expires: 2026-11-30
+expires: 2027-12-31
 ---
 
 ## Why
@@ -64,7 +64,8 @@ return to people. EX-001 stays in force; this exception widens it.
 
 ## Ends when
 
-Intent 0001 is live and its first incident has been triaged, or
-2026-11-30, or the product owner sets `status: revoked` — whichever comes
-first. On ending, the required reviewer is restored on each repo's
-`production` environment and every gate returns to its named human.
+When the product owner says so: by setting `status: revoked` in a PR they
+merge. There is no automatic end — the `expires` date is only the
+backstop the hooks require. On revocation the required reviewer is
+restored on each repo's `production` environment and every gate returns
+to its named human.
