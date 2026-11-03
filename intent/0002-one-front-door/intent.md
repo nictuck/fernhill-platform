@@ -1,7 +1,7 @@
 ---
 id: "0002"
 title: One place to run the loop
-status: proposed
+status: accepted
 author: Nicholas Tucker
 origin: idea
 product: ""
