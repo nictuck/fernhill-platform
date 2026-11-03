@@ -2,7 +2,7 @@
 intent: "0002"
 status: proposed
 personas: [compliance, security-lead, tech-lead, ux]
-flagged: 27
+flagged: 0
 ---
 
 ## Summary
@@ -278,9 +278,12 @@ Product owner, 2026-11-02 and 2026-11-03:
   platform changes ship as platform PRs the plan names, `docs/flow.md`
   first.
 - flow.md's automation path is out of this intent.
-- Pending at gate 2 (see Flagged concerns): gate 5 off the board; no
-  refresh tokens; no required code-owner review in this intent; `/new` in
-  the first slice; who records the trial.
+- At gate 2 (2026-11-03): no refresh tokens; gate 5 off the board in this
+  intent; no required code-owner review in this intent (known gap with a
+  closing trigger); `/new` stays in the first slice, with prompts; the
+  trial is recorded by the second person as they go and reviewed by the
+  product owner against git timestamps. All 27 flagged concerns resolved
+  as proposed.
 
 ### Changes to `docs/flow.md`, made first
 
@@ -448,47 +451,47 @@ suspicion is suspending the App installation; second is
 ## Flagged concerns
 
 One entry per Important finding from the design-gate review (posted on
-the PR). The design above already carries each proposed resolution; the
-owner ticks the box and writes the resolution, or changes the design.
+the PR). All resolved by the product owner on 2026-11-03; the design above
+reflects each resolution.
 
 **Tech lead**
 
-- [ ] **tech-lead**: required code-owner review deadlocks owner-authored PRs — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R9 — server check, validator and CI are the control; branch protection unchanged as backstop; known gap with closing trigger)
-- [ ] **tech-lead**: `release.approve` untestable under EX-002 — *owner:* Nicholas Tucker — *resolution:* pending (proposed: gate 5 off the board set in this intent, R6)
-- [ ] **tech-lead**: deployment-review permission unnamed — *owner:* Nicholas Tucker — *resolution:* pending (proposed: moot once gate 5 is off the board; R19 names only Metadata, Contents, Pull requests)
-- [ ] **tech-lead**: two-step flip makes the person poll — *owner:* Nicholas Tucker — *resolution:* pending (proposed: flip + GitHub auto-merge in one click, R6/R10)
-- [ ] **tech-lead**: four copies of roles — *owner:* Nicholas Tucker — *resolution:* pending (proposed: `roles` the sole source; table and `CODEOWNERS` generated; collector checks products at refresh, R2)
-- [ ] **tech-lead**: `Next:` copy table cross-repo — *owner:* Nicholas Tucker — *resolution:* pending (proposed: `next-steps.json` in the platform, R11)
-- [ ] **tech-lead**: R12 changes hooks and `release.yml` though Out of scope said otherwise — *owner:* Nicholas Tucker — *resolution:* pending (proposed: in scope, holder check in both; first roles PR re-grants EX-002 in the same PR, R12)
-- [ ] **tech-lead**: no migration or partial-failure story — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R20; resumable actions in R8)
+- [x] **tech-lead**: required code-owner review deadlocks owner-authored PRs — *owner:* Nicholas Tucker — *resolution:* R9 — server check, validator and CI are the control; branch protection unchanged as backstop; known gap with closing trigger — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: `release.approve` untestable under EX-002 — *owner:* Nicholas Tucker — *resolution:* gate 5 off the board set in this intent, R6 — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: deployment-review permission unnamed — *owner:* Nicholas Tucker — *resolution:* moot once gate 5 is off the board; R19 names only Metadata, Contents, Pull requests — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: two-step flip makes the person poll — *owner:* Nicholas Tucker — *resolution:* flip + GitHub auto-merge in one click, R6/R10 — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: four copies of roles — *owner:* Nicholas Tucker — *resolution:* `roles` the sole source; table and `CODEOWNERS` generated; collector checks products at refresh, R2 — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: `Next:` copy table cross-repo — *owner:* Nicholas Tucker — *resolution:* `next-steps.json` in the platform, R11 — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: R12 changes hooks and `release.yml` though Out of scope said otherwise — *owner:* Nicholas Tucker — *resolution:* in scope, holder check in both; first roles PR re-grants EX-002 in the same PR, R12 — Nicholas Tucker, 2026-11-03
+- [x] **tech-lead**: no migration or partial-failure story — *owner:* Nicholas Tucker — *resolution:* R20; resumable actions in R8 — Nicholas Tucker, 2026-11-03
 
 **Security lead**
 
-- [ ] **security-lead**: OAuth return has no `state`; `SameSite=Strict` drops the cookie on return — *owner:* Nicholas Tucker — *resolution:* pending (proposed: `state` cookie checked at callback, session cookie `Lax`, R1/R17)
-- [ ] **security-lead**: refresh token extends exposure to six months; sign-out revokes nothing — *owner:* Nicholas Tucker — *resolution:* pending (proposed: no refresh tokens, hard 8 h sessions, sign-out revokes at GitHub, R17) — **decision: drop refresh tokens?**
-- [ ] **security-lead**: "no write-capable server credential" only if no App private key exists; installation-token wording wrong — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R7 reworded; test asserts no private key and no write PAT)
-- [ ] **security-lead**: `Deployments: write` for one action — *owner:* Nicholas Tucker — *resolution:* pending (proposed: gate 5 off the board, R6) — **decision: gate 5 off the board?**
-- [ ] **security-lead**: `board_actions` in the snapshot is not an instant kill switch; stays on while refresh fails — *owner:* Nicholas Tucker — *resolution:* pending (proposed: `act` fails closed without readable config; App suspension is the first response, R8/R14)
-- [ ] **security-lead**: F1 open — *owner:* Nicholas Tucker — *resolution:* pending (proposed: F1 closed before any 0002 secret is set, R19)
+- [x] **security-lead**: OAuth return has no `state`; `SameSite=Strict` drops the cookie on return — *owner:* Nicholas Tucker — *resolution:* `state` cookie checked at callback, session cookie `Lax`, R1/R17 — Nicholas Tucker, 2026-11-03
+- [x] **security-lead**: refresh token extends exposure to six months; sign-out revokes nothing — *owner:* Nicholas Tucker — *resolution:* no refresh tokens, hard 8 h sessions, sign-out revokes at GitHub, R17 — Nicholas Tucker, 2026-11-03
+- [x] **security-lead**: "no write-capable server credential" only if no App private key exists; installation-token wording wrong — *owner:* Nicholas Tucker — *resolution:* R7 reworded; test asserts no private key and no write PAT — Nicholas Tucker, 2026-11-03
+- [x] **security-lead**: `Deployments: write` for one action — *owner:* Nicholas Tucker — *resolution:* gate 5 off the board, R6 — Nicholas Tucker, 2026-11-03
+- [x] **security-lead**: `board_actions` in the snapshot is not an instant kill switch; stays on while refresh fails — *owner:* Nicholas Tucker — *resolution:* `act` fails closed without readable config; App suspension is the first response, R8/R14 — Nicholas Tucker, 2026-11-03
+- [x] **security-lead**: F1 open — *owner:* Nicholas Tucker — *resolution:* F1 closed before any 0002 secret is set, R19 — Nicholas Tucker, 2026-11-03
 
 **UX**
 
-- [ ] **ux**: empty *Needs you* says nothing about who the loop waits on — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R4 copy)
-- [ ] **ux**: no first-run state for a person with no clone — *owner:* Nicholas Tucker — *resolution:* pending (proposed: no-clone line on every terminal row and in onboarding, R5/R13)
-- [ ] **ux**: gate 4's hidden precondition (no review yet) has no copy — *owner:* Nicholas Tucker — *resolution:* pending (proposed: "Not yet reviewed" state, R10)
-- [ ] **ux**: refusals are dead ends; known-false preconditions should disable with reason — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R5/R8)
-- [ ] **ux**: flip state names no actor or duration — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R10 copy)
-- [ ] **ux**: `/new` has no entry point and blank sections are hostile — *owner:* Nicholas Tucker — *resolution:* pending (proposed: *Start an idea* in header and empty state; prompts and examples per section; the tech lead would defer `/new` to a second slice) — **decision: keep `/new` in the first slice?**
-- [ ] **ux**: the trial counts only questions, not stalls; needs an observer who is not the product owner — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R16 counts stalls, surfaces and time by rule; recorded by the second person as they go, reviewed against git timestamps by the product owner) — **decision: who records the trial?**
+- [x] **ux**: empty *Needs you* says nothing about who the loop waits on — *owner:* Nicholas Tucker — *resolution:* R4 copy — Nicholas Tucker, 2026-11-03
+- [x] **ux**: no first-run state for a person with no clone — *owner:* Nicholas Tucker — *resolution:* no-clone line on every terminal row and in onboarding, R5/R13 — Nicholas Tucker, 2026-11-03
+- [x] **ux**: gate 4's hidden precondition (no review yet) has no copy — *owner:* Nicholas Tucker — *resolution:* "Not yet reviewed" state, R10 — Nicholas Tucker, 2026-11-03
+- [x] **ux**: refusals are dead ends; known-false preconditions should disable with reason — *owner:* Nicholas Tucker — *resolution:* R5/R8 — Nicholas Tucker, 2026-11-03
+- [x] **ux**: flip state names no actor or duration — *owner:* Nicholas Tucker — *resolution:* R10 copy — Nicholas Tucker, 2026-11-03
+- [x] **ux**: `/new` has no entry point and blank sections are hostile — *owner:* Nicholas Tucker — *resolution:* *Start an idea* in header and empty state; prompts and examples per section; the tech lead would defer `/new` to a second slice — Nicholas Tucker, 2026-11-03
+- [x] **ux**: the trial counts only questions, not stalls; needs an observer who is not the product owner — *owner:* Nicholas Tucker — *resolution:* R16 counts stalls, surfaces and time by rule; recorded by the second person as they go, reviewed against git timestamps by the product owner — Nicholas Tucker, 2026-11-03
 
 **Compliance**
 
-- [ ] **compliance**: R9 does not enforce as written; listing both logins on every path lets the engineer approve intent flips — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R9 as above; per-path ownership in R2; no required owner review in this intent)
-- [ ] **compliance**: role changes are delegable under `merge-guardrails` — *owner:* Nicholas Tucker — *resolution:* pending (proposed: R13 — never delegated; flow.md and EX-002 amended by the product owner)
-- [ ] **compliance**: who merges a re-grant when a gate has two holders — *owner:* Nicholas Tucker — *resolution:* pending (proposed: product owner merges with the new holder's approval on the PR, R12)
-- [ ] **compliance**: `release.approve` ignores record-ahead-of-deployment — *owner:* Nicholas Tucker — *resolution:* pending (proposed: gate 5 off the board, R6)
-- [ ] **compliance**: secrets cannot be recorded before the change in a form the validator accepts — *owner:* Nicholas Tucker — *resolution:* pending (proposed: `releases/0002-v0.2.0.md` with `status: proposed` and no `commit` precedes the secrets; F1 closed first, R19)
-- [ ] **compliance**: trial evidence lands only in the `authorized` amendment — *owner:* Nicholas Tucker — *resolution:* pending (proposed: validator refuses `authorized` on 0002 without baseline, count, surface log and name, R16)
+- [x] **compliance**: R9 does not enforce as written; listing both logins on every path lets the engineer approve intent flips — *owner:* Nicholas Tucker — *resolution:* R9 as above; per-path ownership in R2; no required owner review in this intent — Nicholas Tucker, 2026-11-03
+- [x] **compliance**: role changes are delegable under `merge-guardrails` — *owner:* Nicholas Tucker — *resolution:* R13 — never delegated; flow.md and EX-002 amended by the product owner — Nicholas Tucker, 2026-11-03
+- [x] **compliance**: who merges a re-grant when a gate has two holders — *owner:* Nicholas Tucker — *resolution:* product owner merges with the new holder's approval on the PR, R12 — Nicholas Tucker, 2026-11-03
+- [x] **compliance**: `release.approve` ignores record-ahead-of-deployment — *owner:* Nicholas Tucker — *resolution:* gate 5 off the board, R6 — Nicholas Tucker, 2026-11-03
+- [x] **compliance**: secrets cannot be recorded before the change in a form the validator accepts — *owner:* Nicholas Tucker — *resolution:* `releases/0002-v0.2.0.md` with `status: proposed` and no `commit` precedes the secrets; F1 closed first, R19 — Nicholas Tucker, 2026-11-03
+- [x] **compliance**: trial evidence lands only in the `authorized` amendment — *owner:* Nicholas Tucker — *resolution:* validator refuses `authorized` on 0002 without baseline, count, surface log and name, R16 — Nicholas Tucker, 2026-11-03
 
 ## Acceptance
 
