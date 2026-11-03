@@ -4,7 +4,7 @@ title: One place to run the loop
 status: accepted
 author: Nicholas Tucker
 origin: idea
-product: ""
+product: "fernhill-flow"
 created: 2026-11-02
 ---
 
