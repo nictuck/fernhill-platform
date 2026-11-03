@@ -115,10 +115,39 @@ tuned).
 
 ### releases/NNNN-vX.Y.Z.md
 
-Written by `/release` before the release manager approves production:
-intent, spec commit, PRs, CI run, staging check, open findings and waivers,
-rollback command, persona verdicts. The approval itself is recorded by
-GitHub.
+```yaml
+---
+intent: "0001"
+version: v0.1.0
+product: fernhill-flow    # the product repo's name
+status: proposed          # proposed | authorized | rolled-back
+prepared: 2026-11-02
+commit: <full 40-hex sha> # the commit on the product's main being released
+released:                 # with authorized: when production served the commit
+release_run:              # with authorized: the release workflow run id
+authorized_by:            # with authorized: the approver, or "delegated under EX-NNN"
+---
+```
+
+Written by `/release`: intent, spec commit, PRs, CI run, staging check,
+open findings and waivers, rollback command, persona verdicts. It lives in
+this repo, not the product's. `proposed` means the record is merged and
+gate 5 has not passed; `authorized` means `production` serves `commit`
+(set afterwards, with `released`, `release_run` and `authorized_by`);
+`rolled-back` means production was moved off `commit`. When the release
+manager holds the gate, the record precedes their approval and GitHub
+records the approval itself. When an exception delegates gate 5
+(`release` grant), no person approves, so the record is the gate's only
+evidence and the ordering flips: as soon as `/review` has merged the
+product PR, the person runs `/release <id> <version>` on the platform with
+the merge commit, and the record is reviewed and merged before `production`
+moves; the product's `release` workflow refuses to fast-forward until a
+record on this repo's `main` names that repo in `product:` and that exact
+sha in `commit:` with status `proposed` or `authorized`, and it waits for
+one for as long as it waits for staging (a run that timed out is re-run
+once the record is in). The platform's own front door has
+no intent and no record; it is the one site that releases under a
+delegated gate on the exception id alone.
 
 ## Gates
 
@@ -144,6 +173,9 @@ Rules enforced by hooks and CI, not by goodwill:
 - The agent cannot deploy to production (`production-gate` hook locally;
   only the `release` workflow moves `production`, behind the environment's
   required reviewer in GitHub).
+- Under a delegated gate 5 the `release` workflow refuses to move a
+  product's `production` until a release record on this repo's `main`
+  names the commit (see `releases/NNNN-vX.Y.Z.md` above).
 - During a `/fix` task the agent cannot edit test files (`protect-tests` hook).
 - Code changes without a matching `plan/` update get a warning at commit
   time (`plan-sync` hook).
